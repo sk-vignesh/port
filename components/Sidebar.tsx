@@ -33,9 +33,9 @@ const navGroups = [
   {
     label: 'Analysis',
     items: [
-      { href: '/reports',   label: 'Reports',    icon: BarChart3 },
+      { href: '/reports',    label: 'Reports',    icon: BarChart3 },
       { href: '/watchlists', label: 'Watchlists', icon: Star },
-      { href: '/taxonomies', label: 'Allocation', icon: Network },
+      { href: '/taxonomies', label: 'Taxonomies', icon: Network },
     ],
   },
 ]

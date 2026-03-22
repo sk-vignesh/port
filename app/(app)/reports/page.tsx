@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-const fmt = (v: number, cur = 'INR') =>
+const fmtCur = (v: number, cur = 'INR') =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur, maximumFractionDigits: 0 }).format(v)
 
 const pct = (v: number | null) =>
@@ -14,17 +14,16 @@ const pct = (v: number | null) =>
 const pctColor = (v: number | null) =>
   v === null ? '' : v >= 0 ? 'amount-positive' : 'amount-negative'
 
-function closestPrice(map: Map<string, { date: string; value: number }[]>, secId: string, daysAgo: number): number | null {
+function closestPrice(
+  map: Map<string, { date: string; value: number }[]>,
+  secId: string, daysAgo: number
+): number | null {
   const rows = map.get(secId)
   if (!rows?.length) return null
-  const target = new Date(); target.setDate(target.getDate() - daysAgo)
-  // find the most recent price at or before target date
-  const iso = target.toISOString().slice(0, 10)
+  const iso = new Date(Date.now() - daysAgo * 864e5).toISOString().slice(0, 10)
   const valid = rows.filter(r => r.date <= iso)
   return valid.length ? valid[0].value / 100 : null
 }
-
-// ─── types ────────────────────────────────────────────────────────────────────
 
 interface Holding {
   secId: string; name: string; ticker: string | null; currency: string
@@ -37,8 +36,10 @@ interface PeriodChange { value: number; change1d: number | null; change1w: numbe
 function aggregateChange(holdings: Holding[], histMap: Map<string, { date: string; value: number }[]>): PeriodChange {
   let value = 0, val1d = 0, val1w = 0, val1m = 0, has1d = true, has1w = true, has1m = true
   for (const h of holdings) {
-    if (h.currentValue === null || h.netShares <= 0) continue
-    value += h.currentValue
+    if (h.netShares <= 0) continue
+    const cur = h.currentValue ?? 0
+    value += cur
+    if (cur === 0) continue
     const p1d = h.previousClose ?? h.currentPrice
     const p1w = closestPrice(histMap, h.secId, 7) ?? h.currentPrice
     const p1m = closestPrice(histMap, h.secId, 30) ?? h.currentPrice
@@ -54,73 +55,68 @@ function aggregateChange(holdings: Holding[], histMap: Map<string, { date: strin
   }
 }
 
-// ─── component ────────────────────────────────────────────────────────────────
+const BUY_TYPES  = new Set(['BUY', 'DELIVERY_INBOUND', 'TRANSFER_IN'])
+const SELL_TYPES = new Set(['SELL', 'DELIVERY_OUTBOUND', 'TRANSFER_OUT'])
 
 export default async function ReportsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // ── Fetch everything in parallel ──────────────────────────────────────────
-  const [
-    { data: portfoliosRaw },
-    { data: txnsRaw },
-    { data: securitiesRaw },
-    { data: latestPricesRaw },
-    { data: histPricesRaw },
-    { data: taxonomiesRaw },
-    { data: classificationsRaw },
-    { data: assignmentsRaw },
-  ] = await Promise.all([
+  // Step 1 — fetch IDs needed for dependent queries
+  const [portfolioIdRows, securityIdRows, taxonomyIdRows] = await Promise.all([
     supabase.from('portfolios').select('id, name').eq('user_id', user.id).eq('is_retired', false),
-    supabase.from('portfolio_transactions').select('portfolio_id, security_id, type, shares').in(
-      'portfolio_id',
-      (await supabase.from('portfolios').select('id').eq('user_id', user.id).eq('is_retired', false)).data?.map(p => p.id) ?? []
-    ),
     supabase.from('securities').select('id, name, ticker_symbol, currency_code').eq('user_id', user.id).eq('is_retired', false),
-    supabase.from('security_latest_prices').select('security_id, value, previous_close').in(
-      'security_id',
-      (await supabase.from('securities').select('id').eq('user_id', user.id).eq('is_retired', false)).data?.map(s => s.id) ?? []
-    ),
-    // last 35 days of prices for 1w/1m lookups
-    supabase.from('security_prices').select('security_id, date, value').in(
-      'security_id',
-      (await supabase.from('securities').select('id').eq('user_id', user.id).eq('is_retired', false)).data?.map(s => s.id) ?? []
-    ).gte('date', new Date(Date.now() - 35 * 864e5).toISOString().slice(0, 10)).order('date', { ascending: false }),
     supabase.from('taxonomies').select('id, name').eq('user_id', user.id).order('sort_order'),
-    supabase.from('classifications').select('id, taxonomy_id, name, color').in(
-      'taxonomy_id',
-      (await supabase.from('taxonomies').select('id').eq('user_id', user.id)).data?.map(t => t.id) ?? []
-    ),
-    supabase.from('classification_assignments').select('classification_id, investment_vehicle_id, investment_vehicle_type, weight').eq('investment_vehicle_type', 'SECURITY'),
   ])
 
-  const portfolios = portfoliosRaw ?? []
-  const txns = txnsRaw ?? []
-  const securities = securitiesRaw ?? []
-  const latestPrices = latestPricesRaw ?? []
-  const histPrices = histPricesRaw ?? []
-  const taxonomies = taxonomiesRaw ?? []
-  const classifications = classificationsRaw ?? []
-  const assignments = assignmentsRaw ?? []
+  const portfolios = portfolioIdRows.data ?? []
+  const securities = securityIdRows.data ?? []
+  const taxonomies = taxonomyIdRows.data ?? []
+  const portIds    = portfolios.map(p => p.id)
+  const secIds     = securities.map(s => s.id)
+  const taxIds     = taxonomies.map(t => t.id)
 
-  // ── Index maps ────────────────────────────────────────────────────────────
-  const secMap = new Map(securities.map(s => [s.id, s]))
+  // Step 2 — parallel fetch of everything using those IDs
+  const [txnsRes, latestRes, histRes, classRes, assignRes] = await Promise.all([
+    portIds.length > 0
+      ? supabase.from('portfolio_transactions').select('portfolio_id, security_id, type, shares').in('portfolio_id', portIds)
+      : Promise.resolve({ data: [] }),
+    secIds.length > 0
+      ? supabase.from('security_latest_prices').select('security_id, value, previous_close').in('security_id', secIds)
+      : Promise.resolve({ data: [] }),
+    secIds.length > 0
+      ? supabase.from('security_prices').select('security_id, date, value')
+          .in('security_id', secIds)
+          .gte('date', new Date(Date.now() - 35 * 864e5).toISOString().slice(0, 10))
+          .order('date', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    taxIds.length > 0
+      ? supabase.from('classifications').select('id, taxonomy_id, name, color').in('taxonomy_id', taxIds)
+      : Promise.resolve({ data: [] }),
+    supabase.from('classification_assignments')
+      .select('classification_id, investment_vehicle_id')
+      .eq('investment_vehicle_type', 'SECURITY'),
+  ])
+
+  const txns           = txnsRes.data   ?? []
+  const latestPrices   = latestRes.data ?? []
+  const histPrices     = histRes.data   ?? []
+  const classifications = classRes.data ?? []
+  const assignments    = assignRes.data ?? []
+
+  // ── Index maps ──────────────────────────────────────────────────────────
+  const secMap    = new Map(securities.map(s => [s.id, s]))
   const latestMap = new Map(latestPrices.map(p => [p.security_id, p]))
 
-  // hist prices per security, sorted desc
   const histMap = new Map<string, { date: string; value: number }[]>()
   for (const hp of histPrices) {
     if (!histMap.has(hp.security_id)) histMap.set(hp.security_id, [])
     histMap.get(hp.security_id)!.push({ date: hp.date, value: hp.value })
   }
 
-  // ── Net shares per (portfolio, security) ─────────────────────────────────
-  const BUY_TYPES  = new Set(['BUY', 'DELIVERY_INBOUND', 'TRANSFER_IN'])
-  const SELL_TYPES = new Set(['SELL', 'DELIVERY_OUTBOUND', 'TRANSFER_OUT'])
-
-  type Key = string // `${portfolioId}::${securityId}`
-  const netSharesMap = new Map<Key, number>()
+  // ── Net shares per (portfolio, security) ────────────────────────────────
+  const netSharesMap = new Map<string, number>()
   for (const tx of txns) {
     const key = `${tx.portfolio_id}::${tx.security_id}`
     const cur = netSharesMap.get(key) ?? 0
@@ -129,7 +125,7 @@ export default async function ReportsPage() {
     if (SELL_TYPES.has(tx.type)) netSharesMap.set(key, cur - shares)
   }
 
-  // ── Build holdings list ───────────────────────────────────────────────────
+  // ── Build holdings ───────────────────────────────────────────────────────
   function buildHoldings(portfolioId?: string): Holding[] {
     const result: Holding[] = []
     const seen = new Set<string>()
@@ -143,42 +139,37 @@ export default async function ReportsPage() {
       const sec = secMap.get(secId)
       if (!sec) continue
       const lp = latestMap.get(secId)
-      const currentPrice = lp ? lp.value / 100 : null
+      const currentPrice  = lp ? lp.value / 100 : null
       const previousClose = lp?.previous_close ? lp.previous_close / 100 : null
-      const currentValue = currentPrice !== null ? netShares * currentPrice : null
+      const currentValue  = currentPrice !== null ? netShares * currentPrice : null
       result.push({ secId, name: sec.name, ticker: sec.ticker_symbol, currency: sec.currency_code, currentPrice, previousClose, netShares, currentValue })
     }
     return result.sort((a, b) => (b.currentValue ?? 0) - (a.currentValue ?? 0))
   }
 
-  const allHoldings = buildHoldings()
-  const overall = aggregateChange(allHoldings, histMap)
+  const allHoldings  = buildHoldings()
+  const overall      = aggregateChange(allHoldings, histMap)
+  const hasAnyTrades = allHoldings.length > 0
 
   const portfolioData = portfolios.map(p => ({
-    ...p,
-    holdings: buildHoldings(p.id),
-    summary: aggregateChange(buildHoldings(p.id), histMap),
+    ...p, summary: aggregateChange(buildHoldings(p.id), histMap),
   }))
 
-  // ── Taxonomy breakdown ────────────────────────────────────────────────────
-  const classMap = new Map(classifications.map(c => [c.id, c]))
   const taxData = taxonomies.map(tax => {
-    const taxClasses = classifications.filter(c => c.taxonomy_id === tax.id)
-    const groups = taxClasses.map(cls => {
-      const secIds = assignments
-        .filter(a => a.classification_id === cls.id)
-        .map(a => a.investment_vehicle_id)
-      const holdings = allHoldings.filter(h => secIds.includes(h.secId))
-      return { cls, holdings, summary: aggregateChange(holdings, histMap) }
-    }).filter(g => g.holdings.length > 0)
+    const groups = classifications
+      .filter(c => c.taxonomy_id === tax.id)
+      .map(cls => {
+        const secIds2 = assignments.filter(a => a.classification_id === cls.id).map(a => a.investment_vehicle_id)
+        const holdings = allHoldings.filter(h => secIds2.includes(h.secId))
+        return { cls, holdings, summary: aggregateChange(holdings, histMap) }
+      }).filter(g => g.holdings.length > 0)
     return { tax, groups }
   }).filter(t => t.groups.length > 0)
 
-  // ── Render helpers ────────────────────────────────────────────────────────
-  const ChangeRow = ({ label, s, sub = false }: { label: string; s: PeriodChange; sub?: boolean }) => (
-    <tr style={{ background: sub ? 'transparent' : undefined }}>
-      <td style={{ paddingLeft: sub ? 28 : 14, fontWeight: sub ? 400 : 600, fontSize: sub ? '0.82rem' : '0.875rem' }}>{label}</td>
-      <td className="table-right font-mono text-sm">{s.value > 0 ? fmt(s.value) : '—'}</td>
+  const ChangeRow = ({ label, s }: { label: string; s: PeriodChange }) => (
+    <tr>
+      <td style={{ paddingLeft: 14, fontWeight: 600, fontSize: '0.875rem' }}>{label}</td>
+      <td className="table-right font-mono text-sm">{s.value > 0 ? fmtCur(s.value) : '—'}</td>
       <td className={`table-right font-mono text-sm ${pctColor(s.change1d)}`}>{pct(s.change1d)}</td>
       <td className={`table-right font-mono text-sm ${pctColor(s.change1w)}`}>{pct(s.change1w)}</td>
       <td className={`table-right font-mono text-sm ${pctColor(s.change1m)}`}>{pct(s.change1m)}</td>
@@ -192,7 +183,7 @@ export default async function ReportsPage() {
         <p className="page-subtitle">Portfolio changes across all time horizons and groupings</p>
       </div>
 
-      {allHoldings.length === 0 && (
+      {!hasAnyTrades && (
         <div className="card">
           <div className="empty-state">
             <div className="empty-state-icon">📊</div>
@@ -203,22 +194,22 @@ export default async function ReportsPage() {
         </div>
       )}
 
-      {allHoldings.length > 0 && (
+      {hasAnyTrades && (
         <>
-          {/* ── Summary hero ── */}
+          {/* ── Hero cards ── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
             {[
-              { label: 'Portfolio Value', value: fmt(overall.value), sub: null },
-              { label: 'Today',    value: pct(overall.change1d), sub: overall.change1d },
-              { label: '1 Week',   value: pct(overall.change1w), sub: overall.change1w },
-              { label: '1 Month',  value: pct(overall.change1m), sub: overall.change1m },
+              { label: 'Portfolio Value', value: overall.value > 0 ? fmtCur(overall.value) : '—', sub: null },
+              { label: 'Today',   value: pct(overall.change1d), sub: overall.change1d },
+              { label: '1 Week',  value: pct(overall.change1w), sub: overall.change1w },
+              { label: '1 Month', value: pct(overall.change1m), sub: overall.change1m },
             ].map(card => (
               <div key={card.label} className="card" style={{ padding: '18px 20px' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: 6 }}>
                   {card.label}
                 </div>
                 <div style={{
-                  fontSize: '1.4rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums',
+                  fontSize: '1.35rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums',
                   color: card.sub === null ? 'var(--color-text-primary)'
                     : card.sub >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
                 }}>
@@ -235,15 +226,10 @@ export default async function ReportsPage() {
               <div className="table-container">
                 <table className="table">
                   <thead><tr>
-                    <th>Portfolio</th>
-                    <th className="table-right">Value</th>
-                    <th className="table-right">Today</th>
-                    <th className="table-right">1 Week</th>
-                    <th className="table-right">1 Month</th>
+                    <th>Portfolio</th><th className="table-right">Value</th>
+                    <th className="table-right">Today</th><th className="table-right">1 Week</th><th className="table-right">1 Month</th>
                   </tr></thead>
-                  <tbody>
-                    {portfolioData.map(p => <ChangeRow key={p.id} label={p.name} s={p.summary} />)}
-                  </tbody>
+                  <tbody>{portfolioData.map(p => <ChangeRow key={p.id} label={p.name} s={p.summary} />)}</tbody>
                 </table>
               </div>
             </div>
@@ -259,37 +245,27 @@ export default async function ReportsPage() {
               <div className="table-container">
                 <table className="table">
                   <thead><tr>
-                    <th>Category</th>
-                    <th className="table-right">Value</th>
-                    <th className="table-right">Today</th>
-                    <th className="table-right">1 Week</th>
-                    <th className="table-right">1 Month</th>
+                    <th>Category</th><th className="table-right">Value</th>
+                    <th className="table-right">Today</th><th className="table-right">1 Week</th><th className="table-right">1 Month</th>
                   </tr></thead>
-                  <tbody>
-                    {groups.map(({ cls, summary }) => <ChangeRow key={cls.id} label={cls.name} s={summary} />)}
-                  </tbody>
+                  <tbody>{groups.map(({ cls, summary }) => <ChangeRow key={cls.id} label={cls.name} s={summary} />)}</tbody>
                 </table>
               </div>
             </div>
           ))}
 
-          {/* ── By Security (all holdings) ── */}
+          {/* ── By Security ── */}
           <div className="card mb-6">
             <div className="card-header"><span className="card-title">By Security</span></div>
             <div className="table-container">
               <table className="table">
                 <thead><tr>
-                  <th>Security</th>
-                  <th className="table-right">Shares</th>
-                  <th className="table-right">Price</th>
-                  <th className="table-right">Value</th>
-                  <th className="table-right">Today</th>
-                  <th className="table-right">1 Week</th>
-                  <th className="table-right">1 Month</th>
+                  <th>Security</th><th className="table-right">Shares</th>
+                  <th className="table-right">Price</th><th className="table-right">Value</th>
+                  <th className="table-right">Today</th><th className="table-right">1 Week</th><th className="table-right">1 Month</th>
                 </tr></thead>
                 <tbody>
-                  {allHoldings.filter(h => h.netShares > 0 && h.currentValue !== null).map(h => {
-                    const lp = latestMap.get(h.secId)
+                  {allHoldings.filter(h => h.netShares > 0).map(h => {
                     const p1d = h.previousClose ?? h.currentPrice
                     const p1w = closestPrice(histMap, h.secId, 7) ?? h.currentPrice
                     const p1m = closestPrice(histMap, h.secId, 30) ?? h.currentPrice
@@ -299,19 +275,15 @@ export default async function ReportsPage() {
                     return (
                       <tr key={h.secId}>
                         <td>
-                          <Link href={`/securities/${h.secId}`} style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>
-                            {h.name}
-                          </Link>
+                          <Link href={`/securities/${h.secId}`} style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>{h.name}</Link>
                           {h.ticker && <div className="font-mono text-xs text-muted">{h.ticker}</div>}
                         </td>
+                        <td className="table-right font-mono text-sm">{Math.round(h.netShares)}</td>
                         <td className="table-right font-mono text-sm">
-                          {new Intl.NumberFormat('en-IN', { maximumFractionDigits: 4 }).format(h.netShares)}
-                        </td>
-                        <td className="table-right font-mono text-sm">
-                          {h.currentPrice !== null ? fmt(h.currentPrice, h.currency) : '—'}
+                          {h.currentPrice !== null ? fmtCur(h.currentPrice, h.currency) : <span className="text-muted">No price</span>}
                         </td>
                         <td className="table-right font-mono text-sm font-semibold">
-                          {h.currentValue !== null ? fmt(h.currentValue, h.currency) : '—'}
+                          {h.currentValue !== null ? fmtCur(h.currentValue, h.currency) : '—'}
                         </td>
                         <td className={`table-right font-mono text-sm ${pctColor(chg1d)}`}>{pct(chg1d)}</td>
                         <td className={`table-right font-mono text-sm ${pctColor(chg1w)}`}>{pct(chg1w)}</td>
@@ -324,13 +296,12 @@ export default async function ReportsPage() {
             </div>
           </div>
 
-          {/* ── Unclassified note ── */}
           {taxonomies.length === 0 && (
             <div className="card" style={{ borderStyle: 'dashed' }}>
               <div className="card-body text-sm text-muted" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: '1.2rem' }}>🏷️</span>
                 <div>
-                  <strong>No taxonomies defined yet.</strong> Create taxonomies (e.g. Sector, Asset Class, Country) and assign securities to classifications to see grouped performance here.
+                  <strong>No taxonomies yet.</strong> Create Sector, Asset Class, Country etc. to group performance by category.
                   <Link href="/taxonomies" style={{ color: 'var(--color-accent-light)', marginLeft: 8 }}>Manage Taxonomies →</Link>
                 </div>
               </div>

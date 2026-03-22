@@ -54,10 +54,10 @@ export function percentChange(current: number, previous: number): number {
   return ((current - previous) / previous) * 100
 }
 
-/** Format a date string to locale */
+/** Format a date string to dd MMM yy (e.g. 22 Mar 26) */
 export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric'
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: '2-digit',
   })
 }
 
