@@ -31,9 +31,10 @@
   --color-purple-bg:      rgba(167,139,250,0.1);
   --color-cyan:           #22d3ee;
 
-  /* Sidebar */
+  /* Sidebar / topbar */
   --sidebar-width:        240px;
   --sidebar-collapsed:    64px;
+  --topbar-height:        56px;
 
   /* Spacing */
   --radius-sm:  6px;
@@ -45,6 +46,37 @@
   --shadow-card:  0 4px 24px rgba(0,0,0,0.4);
   --shadow-glow:  0 0 30px rgba(59,130,246,0.12);
 }
+
+/* ============================================================
+   LIGHT MODE OVERRIDES
+   ============================================================ */
+[data-theme="light"] {
+  --color-bg-primary:     #f3f6fc;
+  --color-bg-secondary:   #ffffff;
+  --color-bg-card:        #ffffff;
+  --color-bg-card-hover:  #f0f4fc;
+  --color-bg-input:       #f1f4fb;
+  --color-border:         #dce3f0;
+  --color-border-focus:   #3b82f6;
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94a3b8;
+  --color-accent:         #2563eb;
+  --color-accent-light:   #3b82f6;
+  --color-accent-glow:    rgba(37,99,235,0.10);
+  --color-success:        #16a34a;
+  --color-success-bg:     rgba(22,163,74,0.08);
+  --color-danger:         #dc2626;
+  --color-danger-bg:      rgba(220,38,38,0.08);
+  --color-warning:        #d97706;
+  --color-warning-bg:     rgba(217,119,6,0.08);
+  --color-purple:         #7c3aed;
+  --color-purple-bg:      rgba(124,58,237,0.08);
+  --shadow-card:          0 2px 12px rgba(0,0,0,0.08);
+  --shadow-glow:          0 0 20px rgba(37,99,235,0.06);
+}
+[data-theme="light"] .table td { border-bottom-color: rgba(220,227,240,0.7); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cdd5e0; }
 
 /* ============================================================
    RESET & BASE
@@ -79,11 +111,15 @@ input, select, textarea { font-family: inherit; }
   min-width: 0;
   margin-left: var(--sidebar-width);
   transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .page-container {
   padding: 28px 32px;
   max-width: 1400px;
+  flex: 1;
 }
 
 .page-header {
