@@ -1,0 +1,42 @@
+name: NSE EOD Price Fetch
+
+on:
+  # 00:30 UTC Mon–Fri — NSE markets close 15:30 IST (10:00 UTC); bhav copy is
+  # published by ~16:30 IST (11:00 UTC). Running at midnight UTC the *next* day
+  # (i.e. 05:30 IST) ensures the previous trading day's data is always available.
+  schedule:
+    - cron: '30 0 * * 2-6'   # Tue–Sat UTC = Mon–Fri IST previous day
+
+  # Allow manual trigger from the Actions tab (useful for backfill / testing)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print what would be updated without writing to DB'
+        required: false
+        default: 'false'
+
+jobs:
+  fetch-prices:
+    name: Fetch NSE bhav copy & update Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Fetch NSE prices and update Supabase
+        env:
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/fetch_nse_prices.py

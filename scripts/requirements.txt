@@ -1,0 +1,3 @@
+# NSE Price Fetcher — Python dependencies
+nselib==2.4.3
+supabase>=2.3.0
