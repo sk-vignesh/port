@@ -12,21 +12,23 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-// CSS custom properties override for dark mode — applied inline on the container
-const DARK_VARS: React.CSSProperties = {
-  '--ag-background-color':          '#0f172a',
-  '--ag-foreground-color':          '#e2e8f0',
-  '--ag-border-color':              '#1e293b',
-  '--ag-header-background-color':   '#151f32',
-  '--ag-header-foreground-color':   '#94a3b8',
-  '--ag-row-hover-color':           '#1e2d4a',
-  '--ag-selected-row-background-color': '#1e3a5f',
-  '--ag-odd-row-background-color':  '#0a1628',
-  '--ag-row-border-color':          '#1e293b',
-  '--ag-input-focus-border-color':  '#3b82f6',
-  '--ag-font-family':               'Inter, system-ui, sans-serif',
-  '--ag-font-size':                 '13px',
-  '--ag-cell-horizontal-padding':   '12px',
+// Map AG Grid's CSS vars to the app's own design tokens — keeps the grid consistent with all other components
+const GRID_VARS: React.CSSProperties = {
+  '--ag-background-color':              'var(--color-bg-card)',
+  '--ag-foreground-color':              'var(--color-text-primary)',
+  '--ag-border-color':                  'var(--color-border)',
+  '--ag-row-border-color':              'var(--color-border)',
+  '--ag-header-background-color':       'var(--color-bg-elevated)',
+  '--ag-header-foreground-color':       'var(--color-text-muted)',
+  '--ag-row-hover-color':               'var(--color-bg-input)',
+  '--ag-selected-row-background-color': 'var(--color-accent-glow)',
+  '--ag-odd-row-background-color':      'var(--color-bg-card)',
+  '--ag-input-focus-border-color':      'var(--color-accent-light)',
+  '--ag-font-family':                   'var(--font-sans, Inter, system-ui, sans-serif)',
+  '--ag-font-size':                     '13px',
+  '--ag-cell-horizontal-padding':       '14px',
+  '--ag-header-height':                 '38px',
+  '--ag-row-height':                    '38px',
 } as React.CSSProperties
 
 export interface AppGridProps {
@@ -96,7 +98,7 @@ export default function AppGrid({
       {/* Grid — dark theme via CSS custom properties on container */}
       <div
         className="ag-theme-quartz"
-        style={{ height, width: '100%', ...DARK_VARS }}
+        style={{ height, width: '100%', ...GRID_VARS }}
       >
         <AgGridReact
           ref={gridRef}
