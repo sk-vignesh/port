@@ -235,7 +235,7 @@ export default async function ReportsPage() {
             </div>
           )}
 
-          {/* ── By Taxonomy ── */}
+          {/* ── By Segment ── */}
           {taxData.map(({ tax, groups }) => (
             <div key={tax.id} className="card mb-6">
               <div className="card-header">
@@ -301,8 +301,8 @@ export default async function ReportsPage() {
               <div className="card-body text-sm text-muted" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: '1.2rem' }}>🏷️</span>
                 <div>
-                  <strong>No taxonomies yet.</strong> Create Sector, Asset Class, Country etc. to group performance by category.
-                  <Link href="/taxonomies" style={{ color: 'var(--color-accent-light)', marginLeft: 8 }}>Manage Taxonomies →</Link>
+                  <strong>No segments yet.</strong> Create Sector, Asset Class, Country etc. to group performance by category.
+                  <Link href="/taxonomies" style={{ color: 'var(--color-accent-light)', marginLeft: 8 }}>Manage Segments →</Link>
                 </div>
               </div>
             </div>

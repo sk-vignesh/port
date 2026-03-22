@@ -24,7 +24,7 @@ const GRID_VARS: React.CSSProperties = {
   '--ag-selected-row-background-color': 'color-mix(in srgb, var(--color-accent-light) 10%, var(--color-bg-card))',
   '--ag-odd-row-background-color':      'var(--color-bg-card)',
   '--ag-input-focus-border-color':      'var(--color-accent-light)',
-  '--ag-font-family':                   'var(--font-sans, Montserrat, Inter, system-ui, sans-serif)',
+  '--ag-font-family': 'Montserrat, sans-serif',
   '--ag-font-size':                     '13.5px',
   '--ag-cell-horizontal-padding':       '18px',
   '--ag-header-height':                 '42px',

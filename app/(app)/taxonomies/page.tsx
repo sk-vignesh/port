@@ -19,18 +19,18 @@ export default async function TaxonomiesPage() {
         <div>
           <h1 className="page-title">Segments</h1>
           <p className="page-subtitle" style={{ marginTop: 4 }}>Classify your holdings by Sector, Market Cap, Asset Type and more</p>
-          <p className="page-subtitle">Taxonomies for classifying your investments</p>
+          <p className="page-subtitle">Segments for classifying your investments</p>
         </div>
-        <Link href="/taxonomies/new" className="btn btn-primary">+ New Taxonomy</Link>
+        <Link href="/taxonomies/new" className="btn btn-primary">+ New Segment</Link>
       </div>
 
       {!taxonomies?.length ? (
         <div className="card">
           <div className="empty-state">
             <div className="empty-state-icon">🗂️</div>
-            <div className="empty-state-title">No taxonomies yet</div>
+            <div className="empty-state-title">No segments yet</div>
             <div className="empty-state-text">
-              Create taxonomies to classify your investments by asset class, region, sector, or any other dimension.
+              Create segments to classify your investments by asset class, region, sector, or any other dimension.
             </div>
             <Link href="/taxonomies/new" className="btn btn-primary mt-4">Create Taxonomy</Link>
           </div>
