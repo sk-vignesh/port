@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, TrendingUp, Wallet, Briefcase, ArrowLeftRight,
-  Star, CalendarClock, Network, PanelLeftClose, PanelLeftOpen,
+  Star, CalendarClock, Network, PanelLeftClose, PanelLeftOpen, BarChart3,
 } from 'lucide-react'
 
 const navGroups = [
@@ -33,6 +33,7 @@ const navGroups = [
   {
     label: 'Analysis',
     items: [
+      { href: '/reports',   label: 'Reports',    icon: BarChart3 },
       { href: '/watchlists', label: 'Watchlists', icon: Star },
       { href: '/taxonomies', label: 'Allocation', icon: Network },
     ],
