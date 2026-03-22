@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatShares, formatDate, txBadgeClass, PORTFOLIO_TX_LABELS } from '@/lib/format'
+export const dynamic = 'force-dynamic'
 
 export default async function PortfolioDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

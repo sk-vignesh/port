@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatDate } from '@/lib/format'
+export const dynamic = 'force-dynamic'
 
 export default async function WatchlistsPage() {
   const supabase = await createClient()

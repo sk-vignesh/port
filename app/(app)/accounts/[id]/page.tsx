@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatDate, ACCOUNT_TX_LABELS, txBadgeClass } from '@/lib/format'
+export const dynamic = 'force-dynamic'
 
 export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

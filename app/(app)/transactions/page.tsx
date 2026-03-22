@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatShares, formatDate, ACCOUNT_TX_LABELS, PORTFOLIO_TX_LABELS, txBadgeClass } from '@/lib/format'
+export const dynamic = 'force-dynamic'
 
 export default async function TransactionsPage() {
   const supabase = await createClient()

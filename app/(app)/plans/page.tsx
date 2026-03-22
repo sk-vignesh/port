@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatDate } from '@/lib/format'
+export const dynamic = 'force-dynamic'
 
 const INTERVAL_LABELS: Record<string, string> = {
   MONTHLY: 'Monthly', QUARTERLY: 'Quarterly',
