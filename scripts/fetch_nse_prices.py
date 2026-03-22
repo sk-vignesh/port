@@ -194,7 +194,11 @@ def main():
         ).execute()
 
         # --- Upsert security_latest_prices ------------------------------------
-        latest_payload: dict = {"security_id": sec_id, "value": price_int}
+        latest_payload: dict = {
+            "security_id": sec_id,
+            "date":        price_date,
+            "value":       price_int,
+        }
         if prev_close_int is not None:
             latest_payload["previous_close"] = prev_close_int
 
