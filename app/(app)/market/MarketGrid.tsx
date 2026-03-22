@@ -1,26 +1,19 @@
 'use client'
 
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community'
+import type {
+  ColDef, IDatasource, IGetRowsParams,
+  SortChangedEvent, ValueGetterParams, ValueFormatterParams,
+  ICellRendererParams,
+} from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
 import { appGridTheme } from '@/lib/agGridTheme'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-export interface MarketRow {
-  symbol:      string
-  close_price: number
-  prev_close:  number | null
-  open_price:  number | null
-  high_price:  number | null
-  low_price:   number | null
-  volume:      number | null
-  isin:        string | null
-  chg:         number | null
-  pct:         number | null
-}
+const CACHE_BLOCK = 100  // rows fetched per request
 
 const fmtINR = (v: number | null | undefined) =>
   v != null
@@ -28,25 +21,95 @@ const fmtINR = (v: number | null | undefined) =>
     : '—'
 
 function ChangeCellRenderer({ value }: ICellRendererParams) {
-  if (value == null || value === '—') return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-  const num = typeof value === 'string' ? parseFloat(value) : (value as number)
+  if (value == null) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+  const num = value as number
   const color = num > 0 ? 'var(--color-success)' : num < 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)'
-  return <span style={{ color, fontWeight: 600 }}>{value}</span>
+  return <span style={{ color, fontWeight: 600 }}>{num > 0 ? '+' : ''}{num.toFixed(2)}%</span>
 }
 
-export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
+function ChangeAmtRenderer({ value }: ICellRendererParams) {
+  if (value == null) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+  const num = value as number
+  const color = num > 0 ? 'var(--color-success)' : num < 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)'
+  return <span style={{ color, fontWeight: 600 }}>{num >= 0 ? '+' : ''}{fmtINR(num)}</span>
+}
+
+export default function MarketGrid({ latestDate }: { latestDate: string }) {
   const gridRef = useRef<AgGridReact>(null)
+  const searchRef    = useRef('')      // avoids stale closure in datasource
+  const sortColRef   = useRef('symbol')
+  const sortDirRef   = useRef<'asc' | 'desc'>('asc')
+  const [search, setSearch] = useState('')
+  const [totalRows, setTotalRows] = useState<number | null>(null)
 
-  const defaultColDef: ColDef = useMemo(() => ({
-    sortable: true, filter: true, resizable: true, minWidth: 90,
-  }), [])
+  // ── Datasource ────────────────────────────────────────────────────────────
+  const buildUrl = useCallback((start: number, end: number) => {
+    const params = new URLSearchParams({
+      date:    latestDate,
+      start:   String(start),
+      end:     String(end),
+      sortCol: sortColRef.current,
+      sortDir: sortDirRef.current,
+    })
+    if (searchRef.current.trim()) params.set('search', searchRef.current.trim())
+    return `/api/market-data?${params}`
+  }, [latestDate])
 
+  const datasource = useMemo((): IDatasource => ({
+    getRows(params: IGetRowsParams) {
+      const start = params.startRow
+      const end   = params.endRow - 1
+      fetch(buildUrl(start, end))
+        .then(r => r.json())
+        .then(({ rows, total }: { rows: unknown[]; total: number }) => {
+          setTotalRows(total)
+          params.successCallback(rows ?? [], total)
+        })
+        .catch(() => params.failCallback())
+    },
+  }), [buildUrl])
+
+  const onGridReady = useCallback(() => {
+    gridRef.current?.api.setGridOption('datasource', datasource)
+  }, [datasource])
+
+  // Re-fetch from row 0 when search or sort changes
+  const refresh = useCallback(() => {
+    gridRef.current?.api.setGridOption('datasource', datasource)
+  }, [datasource])
+
+  const handleSearch = useCallback((val: string) => {
+    searchRef.current = val
+    setSearch(val)
+    refresh()
+  }, [refresh])
+
+  const onSortChanged = useCallback((e: SortChangedEvent) => {
+    const cols = e.api.getColumnState().filter(c => c.sort)
+    if (cols.length > 0) {
+      sortColRef.current  = cols[0].colId
+      sortDirRef.current  = (cols[0].sort as 'asc' | 'desc') ?? 'asc'
+    } else {
+      sortColRef.current = 'symbol'
+      sortDirRef.current = 'asc'
+    }
+    refresh()
+  }, [refresh])
+
+  // ── Excel export ─────────────────────────────────────────────────────────
+  const exportToExcel = useCallback(async () => {
+    const url = buildUrl(0, (totalRows ?? 2500))
+    const { rows } = await fetch(url).then(r => r.json())
+    const ws = XLSX.utils.json_to_sheet(rows ?? [])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'NSE Market Data')
+    XLSX.writeFile(wb, `nse_market_${latestDate}.xlsx`)
+  }, [buildUrl, latestDate, totalRows])
+
+  // ── Column definitions ────────────────────────────────────────────────────
   const colDefs: ColDef[] = useMemo((): ColDef[] => [
     {
-      field: 'symbol',
-      headerName: 'Symbol',
-      pinned: 'left',
-      width: 130,
+      field: 'symbol', headerName: 'Symbol', pinned: 'left', width: 130,
       cellStyle: { fontWeight: 700, color: 'var(--color-accent-light)', letterSpacing: '0.04em' },
     },
     {
@@ -75,17 +138,23 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
       cellStyle: { fontWeight: 700 },
     },
     {
-      field: 'chg', headerName: 'Change', type: 'numericColumn',
-      valueFormatter: (p: ValueFormatterParams) =>
-        p.value != null ? (p.value >= 0 ? '+' : '') + fmtINR(p.value) : '—',
-      cellRenderer: ChangeCellRenderer,
+      colId: 'chg', headerName: 'Change', type: 'numericColumn', sortable: false,
+      valueGetter: (p: ValueGetterParams) => {
+        if (!p.data) return null
+        const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
+        return close_price != null && prev_close != null ? close_price - prev_close : null
+      },
+      valueFormatter: (p: ValueFormatterParams) => p.value != null ? (p.value >= 0 ? '+' : '') + fmtINR(p.value) : '—',
+      cellRenderer: ChangeAmtRenderer,
     },
     {
-      field: 'pct', headerName: '% Change', type: 'numericColumn',
-      sort: 'desc',
-      comparator: (a: number, b: number) => Math.abs(b) - Math.abs(a),
-      valueFormatter: (p: ValueFormatterParams) =>
-        p.value != null ? `${p.value >= 0 ? '+' : ''}${(p.value as number).toFixed(2)}%` : '—',
+      colId: 'pct', headerName: '% Change', type: 'numericColumn', sortable: false,
+      valueGetter: (p: ValueGetterParams) => {
+        if (!p.data) return null
+        const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
+        if (!close_price || !prev_close) return null
+        return ((close_price - prev_close) / prev_close) * 100
+      },
       cellRenderer: ChangeCellRenderer,
     },
     {
@@ -95,36 +164,44 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
       cellStyle: { color: 'var(--color-text-muted)' },
     },
     {
-      field: 'isin', headerName: 'ISIN', width: 140,
+      field: 'isin', headerName: 'ISIN', width: 150, sortable: false,
       cellStyle: { color: 'var(--color-text-muted)', fontSize: '11px' },
     },
   ], [])
 
   const selectionColDef: ColDef = useMemo(() => ({
     checkboxSelection: true,
-    headerCheckboxSelection: true,
+    headerCheckboxSelection: false,  // no select-all in infinite mode
     width: 40, minWidth: 40, maxWidth: 40,
-    pinned: 'left', resizable: false, sortable: false, filter: false,
+    pinned: 'left', resizable: false, sortable: false,
   }), [])
 
-  const exportToExcel = useCallback(() => {
-    const api = gridRef.current?.api
-    if (!api) return
-    const selected = api.getSelectedRows()
-    const data = selected.length > 0 ? selected : rows
-    const ws = XLSX.utils.json_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'NSE Market Data')
-    XLSX.writeFile(wb, `nse_market_${new Date().toISOString().slice(0, 10)}.xlsx`)
-  }, [rows])
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px 8px', flexWrap: 'wrap' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px 10px', flexWrap: 'wrap' }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 360 }}>
+          <span style={{
+            position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--color-text-muted)', fontSize: 14, pointerEvents: 'none',
+          }}>🔍</span>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Search symbol…"
+            value={search}
+            onChange={e => handleSearch(e.target.value)}
+            style={{ paddingLeft: 32, fontSize: '0.82rem', height: 34 }}
+          />
+        </div>
+
         <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-          {rows.length.toLocaleString('en-IN')} securities
+          {totalRows != null ? `${totalRows.toLocaleString('en-IN')} securities` : '…'}
         </span>
         <div style={{ flex: 1 }} />
+
         <button onClick={exportToExcel} style={{
           padding: '5px 16px', borderRadius: 6,
           border: '1px solid var(--color-border)',
@@ -137,21 +214,33 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
         </button>
       </div>
 
+      {/* Grid */}
       <div style={{ height: 640, width: '100%', borderRadius: 8, overflow: 'hidden' }}>
         <AgGridReact
           ref={gridRef}
           theme={appGridTheme}
-          rowData={rows}
+          rowModelType="infinite"
+          datasource={datasource}
+          cacheBlockSize={CACHE_BLOCK}
+          infiniteInitialRowCount={CACHE_BLOCK}
+          maxConcurrentDatasourceRequests={1}
           columnDefs={[selectionColDef, ...colDefs]}
-          defaultColDef={defaultColDef}
+          defaultColDef={{ sortable: true, resizable: true, minWidth: 90 }}
           rowSelection="multiple"
           suppressRowClickSelection
           animateRows
-          pagination
-          paginationPageSize={20}
-          paginationPageSizeSelector={[20, 50, 100]}
+          onGridReady={onGridReady}
+          onSortChanged={onSortChanged}
           domLayout="normal"
         />
+      </div>
+
+      <div style={{
+        padding: '8px 2px', fontSize: '0.72rem', color: 'var(--color-text-muted)',
+        display: 'flex', gap: 8, alignItems: 'center', marginTop: 6,
+      }}>
+        <span>📡</span>
+        <span>NSE EQ bhav copy · loads {CACHE_BLOCK} rows at a time as you scroll</span>
       </div>
     </div>
   )
