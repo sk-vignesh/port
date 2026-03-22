@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatAmount, formatDate, percentChange, formatPercent } from '@/lib/format'
+import SampleDataBanner from '@/components/SampleDataBanner'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
@@ -63,6 +64,11 @@ export default async function DashboardPage() {
           <Link href="/transactions/new" className="btn btn-primary btn-sm">+ Transaction</Link>
         </div>
       </div>
+
+      {/* Sample data banner — shown when user has no data yet */}
+      {!securities?.length && !accounts?.length && (
+        <SampleDataBanner />
+      )}
 
       {/* Key Metrics */}
       <div className="grid-4 mb-6">
