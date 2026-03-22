@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK']
+const CURRENCIES = ['INR', 'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK']
 
 export default function SettingsPage() {
-  const [baseCurrency, setBaseCurrency] = useState('EUR')
+  const [baseCurrency, setBaseCurrency] = useState('INR')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [email, setEmail] = useState<string | null>(null)

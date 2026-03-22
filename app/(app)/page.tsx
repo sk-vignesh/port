@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     supabase.from('user_settings').select('base_currency').eq('user_id', user.id).single(),
   ])
 
-  const baseCurrency = settings?.base_currency ?? 'EUR'
+  const baseCurrency = settings?.base_currency ?? 'INR'
   const portfolioIds = (portfolios ?? []).map(p => p.id)
   const accountIds   = (accounts  ?? []).map(a => a.id)
   const securityIds  = (securities ?? []).map(s => s.id)

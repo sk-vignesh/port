@@ -24,7 +24,7 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
   if (!portfolio) notFound()
 
   const refAccount = portfolio.accounts as unknown as { name: string; currency_code: string } | null
-  const currency = refAccount?.currency_code ?? settings?.base_currency ?? 'EUR'
+  const currency = refAccount?.currency_code ?? settings?.base_currency ?? 'INR'
 
   return (
     <>

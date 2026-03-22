@@ -25,7 +25,7 @@ export function toShares(value: number): number {
 }
 
 /** Format a stored amount for display */
-export function formatAmount(value: number, currency = 'EUR', locale = 'en-US'): string {
+export function formatAmount(value: number, currency = 'INR', locale = 'en-IN'): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const TX_TYPES = ['DEPOSIT','REMOVAL','INTEREST','INTEREST_CHARGE','DIVIDENDS','FEES','FEES_REFUND','TAXES','TAX_REFUND','BUY','SELL','TRANSFER_IN','TRANSFER_OUT']
-const CURRENCIES = ['EUR','USD','GBP','INR','CHF','JPY','CAD','AUD','SEK','NOK','DKK']
+const CURRENCIES = ['INR', 'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK']
 
 export default function NewAccountTransactionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -14,7 +14,7 @@ export default function NewAccountTransactionPage({ params }: { params: { id: st
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
-    type: 'DEPOSIT', amount: '', currency_code: 'EUR', date: new Date().toISOString().slice(0, 10), note: '',
+    type: 'DEPOSIT', amount: '', currency_code: 'INR', date: new Date().toISOString().slice(0, 10), note: '',
   })
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>

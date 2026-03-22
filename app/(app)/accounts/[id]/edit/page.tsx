@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const CURRENCIES = ['EUR','USD','GBP','INR','CHF','JPY','CAD','AUD','SEK','NOK','DKK']
+const CURRENCIES = ['INR', 'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK']
 
 export default function EditAccountPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -13,7 +13,7 @@ export default function EditAccountPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', currency_code: 'EUR', note: '', is_retired: false })
+  const [form, setForm] = useState({ name: '', currency_code: 'INR', note: '', is_retired: false })
 
   useEffect(() => {
     supabase.from('accounts').select('*').eq('id', params.id).single()

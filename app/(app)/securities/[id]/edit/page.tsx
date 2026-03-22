@@ -16,7 +16,7 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: '', currency_code: 'EUR', isin: '', ticker_symbol: '', wkn: '', note: '', is_retired: false,
+    name: '', currency_code: 'INR', isin: '', ticker_symbol: '', wkn: '', note: '', is_retired: false,
   })
 
   useEffect(() => {
