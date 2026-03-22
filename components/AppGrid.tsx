@@ -6,31 +6,53 @@ import type { ColDef, GridApi } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
 
-// Import AG Grid base CSS (required for class-based theming)
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-// Map AG Grid's CSS vars to the app's own design tokens — keeps the grid consistent with all other components
+// Fine-tune the dark quartz base theme to match the app's design system
 const GRID_VARS: React.CSSProperties = {
-  '--ag-background-color':              'var(--color-bg-card)',
-  '--ag-foreground-color':              'var(--color-text-primary)',
-  '--ag-border-color':                  'var(--color-border)',
-  '--ag-row-border-color':              'var(--color-border)',
-  '--ag-header-background-color':       'var(--color-bg-elevated)',
-  '--ag-header-foreground-color':       'var(--color-text-muted)',
-  '--ag-row-hover-color':               'color-mix(in srgb, var(--color-accent-light) 6%, var(--color-bg-card))',
-  '--ag-selected-row-background-color': 'color-mix(in srgb, var(--color-accent-light) 10%, var(--color-bg-card))',
-  '--ag-odd-row-background-color':      'var(--color-bg-card)',
-  '--ag-input-focus-border-color':      'var(--color-accent-light)',
-  '--ag-font-family': 'Montserrat, sans-serif',
-  '--ag-font-size':                     '13.5px',
-  '--ag-cell-horizontal-padding':       '18px',
-  '--ag-header-height':                 '42px',
-  '--ag-row-height':                    '46px',
-  '--ag-header-column-separator-display': 'none',
-  '--ag-header-column-resize-handle-display': 'none',
+  // Backgrounds — pulled from app tokens
+  '--ag-background-color':               'var(--color-bg-card)',
+  '--ag-odd-row-background-color':       'var(--color-bg-card)',
+  '--ag-header-background-color':        'var(--color-bg-elevated)',
+  '--ag-row-hover-color':                '#1e3a5f',
+  '--ag-selected-row-background-color':  '#1e3a5f',
+  '--ag-modal-overlay-background-color': 'rgba(0,0,0,0.5)',
+
+  // Text
+  '--ag-foreground-color':        'var(--color-text-primary)',
+  '--ag-header-foreground-color': 'var(--color-text-muted)',
+  '--ag-secondary-foreground-color': 'var(--color-text-muted)',
+
+  // Borders — subtle
+  '--ag-border-color':            'var(--color-border)',
+  '--ag-row-border-color':        'var(--color-border)',
+  '--ag-cell-horizontal-border':  'none',
+
+  // Inputs / focus
+  '--ag-input-focus-border-color': 'var(--color-accent-light)',
+  '--ag-input-border-color':       'var(--color-border)',
+
+  // Typography — hardcoded Montserrat bypasses CSS var resolution issues
+  '--ag-font-family':   'Montserrat, sans-serif',
+  '--ag-font-size':     '13px',
+  '--ag-font-weight-normal': '400',
+
+  // Layout
+  '--ag-cell-horizontal-padding': '16px',
+  '--ag-header-height':           '42px',
+  '--ag-row-height':               '44px',
+  '--ag-list-item-height':         '36px',
+
+  // Hide column separators for a cleaner look
+  '--ag-header-column-separator-display':       'none',
+  '--ag-header-column-resize-handle-display':   'none',
+
+  // Range selection
+  '--ag-range-selection-border-color':          'var(--color-accent)',
+  '--ag-range-selection-background-color':      'rgba(59,130,246,0.08)',
 } as React.CSSProperties
 
 export interface AppGridProps {
@@ -59,7 +81,7 @@ export default function AppGrid({
   const selectionColDef: ColDef = {
     checkboxSelection: true,
     headerCheckboxSelection: true,
-    width: 44, minWidth: 44, maxWidth: 44,
+    width: 40, minWidth: 40, maxWidth: 40,
     pinned: 'left', resizable: false, sortable: false, filter: false,
   }
 
@@ -81,26 +103,27 @@ export default function AppGrid({
   return (
     <div>
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px 8px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-          {rowData.length} row{rowData.length !== 1 ? 's' : ''}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 2px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+          {rowData.length} {rowData.length !== 1 ? 'records' : 'record'}
         </span>
         <div style={{ flex: 1 }} />
         <button onClick={exportToExcel} style={{
-          padding: '5px 14px', borderRadius: 'var(--radius-md)',
+          padding: '5px 14px', borderRadius: 6,
           border: '1px solid var(--color-border)',
-          background: 'var(--color-bg-input)', color: 'var(--color-text-secondary)',
-          cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: 5,
+          background: 'var(--color-bg-elevated)', color: 'var(--color-text-muted)',
+          cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: 'Montserrat, sans-serif',
         }}>
-          ⬇ Export Excel
+          ↓ Export
         </button>
       </div>
 
-      {/* Grid — dark theme via CSS custom properties on container */}
+      {/* ag-theme-quartz-dark = proper dark base; GRID_VARS refine colors to match app */}
       <div
-        className="ag-theme-quartz"
-        style={{ height, width: '100%', ...GRID_VARS }}
+        className="ag-theme-quartz-dark"
+        style={{ height, width: '100%', borderRadius: 8, overflow: 'hidden', ...GRID_VARS }}
       >
         <AgGridReact
           ref={gridRef}
