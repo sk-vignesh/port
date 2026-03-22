@@ -73,8 +73,7 @@ export default async function MarketPage() {
             <div className="empty-state-icon">📡</div>
             <div className="empty-state-title">No price data yet</div>
             <div className="empty-state-text">
-              Prices are fetched from NSE automatically at midnight UTC.<br />
-              You can also trigger the GitHub Actions workflow manually to fetch immediately.
+              End-of-day prices will appear here once they are available.
             </div>
           </div>
         </div>
