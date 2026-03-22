@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput from '@/components/SecuritySearchInput'
+import { type IndianStock } from '@/lib/indian-stocks'
 
 export default function NewSecurityPage() {
   const router = useRouter()
@@ -20,13 +21,13 @@ export default function NewSecurityPage() {
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }))
 
-  const handleSelect = (result: { symbol: string; name: string; currency: string; exchange: string }) => {
+  const handleSelect = (stock: IndianStock) => {
     setSearchDone(true)
     setForm(f => ({
       ...f,
-      name: result.name,
-      ticker_symbol: result.symbol,
-      currency_code: result.currency,
+      name:          stock.name,
+      ticker_symbol: stock.symbol,
+      currency_code: 'INR',
     }))
   }
 

@@ -1,34 +1,53 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-
-interface SearchResult {
-  symbol: string
-  name: string
-  exchange: string
-  currency: string
-  type: string
-}
+import { useState, useRef, useEffect, useMemo } from 'react'
+import NSE_STOCKS, { type IndianStock } from '@/lib/indian-stocks'
 
 interface Props {
-  onSelect: (result: SearchResult) => void
+  onSelect: (stock: IndianStock) => void
   placeholder?: string
-  initialValue?: string
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  EQUITY: 'Stock', ETF: 'ETF', MUTUALFUND: 'Fund', CRYPTOCURRENCY: 'Crypto',
+/** Simple multi-word fuzzy match — every word in query must appear in name or symbol */
+function matches(stock: IndianStock, query: string): boolean {
+  const haystack = `${stock.name} ${stock.symbol} ${stock.sector}`.toLowerCase()
+  return query.toLowerCase().split(/\s+/).every(word => haystack.includes(word))
 }
 
-export default function SecuritySearchInput({ onSelect, placeholder = 'Search stocks, ETFs… (e.g. Apple, RELIANCE)', initialValue = '' }: Props) {
-  const [query, setQuery] = useState(initialValue)
-  const [results, setResults] = useState<SearchResult[]>([])
+const SECTOR_COLORS: Record<string, string> = {
+  'IT':            '#3b82f6',
+  'Banking':       '#6366f1',
+  'Finance':       '#8b5cf6',
+  'Fintech':       '#a78bfa',
+  'Pharma':        '#22c55e',
+  'Healthcare':    '#16a34a',
+  'Energy':        '#f59e0b',
+  'Utilities':     '#d97706',
+  'FMCG':          '#ec4899',
+  'Auto':          '#f97316',
+  'Industrials':   '#64748b',
+  'Materials':     '#78716c',
+  'Consumer':      '#14b8a6',
+  'Consumer Tech': '#06b6d4',
+  'Retail':        '#0ea5e9',
+  'Insurance':     '#84cc16',
+  'Defence':       '#ef4444',
+  'Telecom':       '#a855f7',
+  'Electronics':   '#06b6d4',
+}
+
+function sectorDot(sector: string) {
+  const color = SECTOR_COLORS[sector] ?? '#94a3b8'
+  return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 1 }} />
+}
+
+export default function SecuritySearchInput({ onSelect, placeholder = 'Search: Reliance, TCS, HDFC Bank, Nifty BeES…' }: Props) {
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [activeIdx, setActiveIdx] = useState(-1)
-  const [selected, setSelected] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   // Close on outside click
   useEffect(() => {
@@ -39,85 +58,89 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search st
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); setOpen(false); return }
-    setLoading(true)
-    const res = await fetch(`/api/prices/search?q=${encodeURIComponent(q)}`)
-    const data = await res.json()
-    setResults(data)
-    setOpen(data.length > 0)
-    setLoading(false)
-    setActiveIdx(-1)
-  }, [])
+  // Instant local search — no debounce needed
+  const results = useMemo<IndianStock[]>(() => {
+    const q = query.trim()
+    if (q.length < 1) return []
+    return NSE_STOCKS.filter(s => matches(s, q)).slice(0, 9)
+  }, [query])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setQuery(val)
-    setSelected(false)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => search(val), 280)
-  }
+  useEffect(() => {
+    setOpen(results.length > 0)
+    setActiveIdx(0)
+  }, [results])
 
-  const handleSelect = (r: SearchResult) => {
-    setQuery(`${r.name} (${r.symbol})`)
-    setSelected(true)
+  // Scroll active item into view
+  useEffect(() => {
+    const el = listRef.current?.children[activeIdx] as HTMLElement | undefined
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [activeIdx])
+
+  const handleSelect = (stock: IndianStock) => {
+    setQuery('')
     setOpen(false)
-    setResults([])
-    onSelect(r)
+    onSelect(stock)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open) return
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, results.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)) }
-    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); handleSelect(results[activeIdx]) }
-    else if (e.key === 'Escape') setOpen(false)
-  }
-
-  const EXCHANGE_FLAG: Record<string, string> = {
-    NSE: '🇮🇳', BSE: '🇮🇳', BOM: '🇮🇳',
-    NMS: '🇺🇸', NGM: '🇺🇸', NYQ: '🇺🇸', PCX: '🇺🇸',
-    LSE: '🇬🇧', LON: '🇬🇧',
-    ETR: '🇩🇪', FRA: '🇩🇪',
-    TYO: '🇯🇵', TSX: '🇨🇦', ASX: '🇦🇺', VTX: '🇨🇭',
+    else if (e.key === 'Enter' && results[activeIdx]) { e.preventDefault(); handleSelect(results[activeIdx]) }
+    else if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur() }
   }
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
       <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+          fontSize: '0.9rem', pointerEvents: 'none', color: 'var(--color-text-muted)',
+        }}>🔍</span>
         <input
+          ref={inputRef}
           type="text"
           className="form-input"
+          style={{ paddingLeft: 36 }}
           value={query}
-          onChange={handleChange}
+          onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={() => results.length > 0 && !selected && setOpen(true)}
+          onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
+          spellCheck={false}
         />
-        {loading && (
-          <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-            searching…
-          </div>
+        {query && (
+          <button type="button" onClick={() => { setQuery(''); setOpen(false); inputRef.current?.focus() }}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>
+            ×
+          </button>
         )}
       </div>
 
       {open && results.length > 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 300,
-          background: 'var(--color-bg-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
-          overflow: 'hidden',
-          maxHeight: 320,
-          overflowY: 'auto',
-        }}>
-          {results.map((r, i) => (
+        <div
+          ref={listRef}
+          style={{
+            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 400,
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+            overflow: 'hidden',
+            maxHeight: 360,
+            overflowY: 'auto',
+          }}
+        >
+          <div style={{ padding: '6px 12px 4px', fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
+            NSE · INR · {results.length} result{results.length !== 1 ? 's' : ''}
+          </div>
+          {results.map((stock, i) => (
             <button
-              key={r.symbol}
+              key={stock.symbol}
               type="button"
-              onClick={() => handleSelect(r)}
+              onClick={() => handleSelect(stock)}
+              onMouseEnter={() => setActiveIdx(i)}
               style={{
                 width: '100%', textAlign: 'left',
                 padding: '10px 14px',
@@ -126,20 +149,22 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search st
                 borderBottom: i < results.length - 1 ? '1px solid var(--color-border)' : 'none',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 10,
+                transition: 'background 0.1s',
               }}
-              onMouseEnter={() => setActiveIdx(i)}
             >
-              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{EXCHANGE_FLAG[r.exchange] ?? '🌐'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.name}
+                  {stock.name}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 1 }}>
-                  {r.symbol} · {r.exchange} · {r.currency}
+                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <code style={{ fontSize: '0.7rem', color: 'var(--color-accent-light)' }}>{stock.symbol}</code>
+                  <span>·</span>
+                  {sectorDot(stock.sector)}
+                  <span>{stock.sector}</span>
                 </div>
               </div>
-              <span style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-input)', color: 'var(--color-text-muted)', flexShrink: 0 }}>
-                {TYPE_LABELS[r.type] ?? r.type}
+              <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', flexShrink: 0, fontWeight: 600 }}>
+                INR
               </span>
             </button>
           ))}
