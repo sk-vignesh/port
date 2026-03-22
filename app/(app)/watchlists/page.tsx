@@ -78,12 +78,12 @@ export default async function WatchlistsPage() {
                             {sec.name}
                           </Link>
                         </td>
-                        <td className="font-mono text-sm">{sec.ticker_symbol ?? '—'}</td>
+                        <td className="text-sm">{sec.ticker_symbol ?? '—'}</td>
                         <td><span className="badge badge-blue">{sec.currency_code}</span></td>
-                        <td className="table-right font-mono text-sm">
+                        <td className="table-right text-sm">
                           {lp ? formatAmount(lp.value, sec.currency_code) : '—'}
                         </td>
-                        <td className={`table-right text-sm font-mono ${change === null ? '' : change >= 0 ? 'amount-positive' : 'amount-negative'}`}>
+                        <td className={`table-right text-sm ${change === null ? '' : change >= 0 ? 'amount-positive' : 'amount-negative'}`}>
                           {change !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—'}
                         </td>
                       </tr>

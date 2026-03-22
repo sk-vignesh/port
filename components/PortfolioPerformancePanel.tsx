@@ -160,16 +160,16 @@ export default function PortfolioPerformancePanel({ portfolioId, currency }: { p
                         {h.name}
                       </Link>
                     </td>
-                    <td className="table-right font-mono text-sm">{formatShares(h.shares)}</td>
-                    <td className="table-right font-mono text-sm">{formatAmount(h.avgCostPerShare, h.currency)}</td>
-                    <td className="table-right font-mono text-sm">{formatAmount(h.costBasis, h.currency)}</td>
-                    <td className="table-right font-mono text-sm">
+                    <td className="table-right text-sm">{formatShares(h.shares)}</td>
+                    <td className="table-right text-sm">{formatAmount(h.avgCostPerShare, h.currency)}</td>
+                    <td className="table-right text-sm">{formatAmount(h.costBasis, h.currency)}</td>
+                    <td className="table-right text-sm">
                       {h.currentValue != null ? formatAmount(h.currentValue, h.currency) : <span className="text-muted">—</span>}
                     </td>
-                    <td className={`table-right font-mono text-sm ${h.gain != null ? (h.gain >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
+                    <td className={`table-right text-sm ${h.gain != null ? (h.gain >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
                       {h.gain != null ? `${h.gain >= 0 ? '+' : ''}${formatAmount(h.gain, h.currency)}` : '—'}
                     </td>
-                    <td className={`table-right font-mono text-sm ${h.gainPct != null ? (h.gainPct >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
+                    <td className={`table-right text-sm ${h.gainPct != null ? (h.gainPct >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
                       {h.gainPct != null ? `${h.gainPct >= 0 ? '+' : ''}${formatPercent(h.gainPct * 100)}` : '—'}
                     </td>
                   </tr>

@@ -95,12 +95,12 @@ export default function NewSecurityPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Ticker Symbol</label>
-                <input type="text" className="form-input font-mono" placeholder="AAPL / RELIANCE.NS" value={form.ticker_symbol} onChange={set('ticker_symbol')} />
+                <input type="text" className="form-input" placeholder="AAPL / RELIANCE.NS" value={form.ticker_symbol} onChange={set('ticker_symbol')} />
                 <div className="text-xs text-muted mt-1">Used for daily price fetch</div>
               </div>
               <div className="form-group">
                 <label className="form-label">Currency *</label>
-                <input type="text" className="form-input font-mono" placeholder="EUR / USD / INR"
+                <input type="text" className="form-input" placeholder="EUR / USD / INR"
                   value={form.currency_code}
                   onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase().slice(0, 3) }))}
                   maxLength={3} required />
@@ -110,11 +110,11 @@ export default function NewSecurityPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">ISIN <span className="text-muted">(optional)</span></label>
-                <input type="text" className="form-input font-mono" placeholder="US0378331005" value={form.isin} onChange={set('isin')} />
+                <input type="text" className="form-input" placeholder="US0378331005" value={form.isin} onChange={set('isin')} />
               </div>
               <div className="form-group">
                 <label className="form-label">WKN <span className="text-muted">(optional)</span></label>
-                <input type="text" className="form-input font-mono" placeholder="865985" value={form.wkn} onChange={set('wkn')} />
+                <input type="text" className="form-input" placeholder="865985" value={form.wkn} onChange={set('wkn')} />
               </div>
             </div>
 

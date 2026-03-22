@@ -169,10 +169,10 @@ export default async function ReportsPage() {
   const ChangeRow = ({ label, s }: { label: string; s: PeriodChange }) => (
     <tr>
       <td style={{ paddingLeft: 14, fontWeight: 600, fontSize: '0.875rem' }}>{label}</td>
-      <td className="table-right font-mono text-sm">{s.value > 0 ? fmtCur(s.value) : '—'}</td>
-      <td className={`table-right font-mono text-sm ${pctColor(s.change1d)}`}>{pct(s.change1d)}</td>
-      <td className={`table-right font-mono text-sm ${pctColor(s.change1w)}`}>{pct(s.change1w)}</td>
-      <td className={`table-right font-mono text-sm ${pctColor(s.change1m)}`}>{pct(s.change1m)}</td>
+      <td className="table-right text-sm">{s.value > 0 ? fmtCur(s.value) : '—'}</td>
+      <td className={`table-right text-sm ${pctColor(s.change1d)}`}>{pct(s.change1d)}</td>
+      <td className={`table-right text-sm ${pctColor(s.change1w)}`}>{pct(s.change1w)}</td>
+      <td className={`table-right text-sm ${pctColor(s.change1m)}`}>{pct(s.change1m)}</td>
     </tr>
   )
 
@@ -276,18 +276,18 @@ export default async function ReportsPage() {
                       <tr key={h.secId}>
                         <td>
                           <Link href={`/securities/${h.secId}`} style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>{h.name}</Link>
-                          {h.ticker && <div className="font-mono text-xs text-muted">{h.ticker}</div>}
+                          {h.ticker && <div className="text-xs text-muted">{h.ticker}</div>}
                         </td>
-                        <td className="table-right font-mono text-sm">{Math.round(h.netShares)}</td>
-                        <td className="table-right font-mono text-sm">
+                        <td className="table-right text-sm">{Math.round(h.netShares)}</td>
+                        <td className="table-right text-sm">
                           {h.currentPrice !== null ? fmtCur(h.currentPrice, h.currency) : <span className="text-muted">No price</span>}
                         </td>
-                        <td className="table-right font-mono text-sm font-semibold">
+                        <td className="table-right text-sm font-semibold">
                           {h.currentValue !== null ? fmtCur(h.currentValue, h.currency) : '—'}
                         </td>
-                        <td className={`table-right font-mono text-sm ${pctColor(chg1d)}`}>{pct(chg1d)}</td>
-                        <td className={`table-right font-mono text-sm ${pctColor(chg1w)}`}>{pct(chg1w)}</td>
-                        <td className={`table-right font-mono text-sm ${pctColor(chg1m)}`}>{pct(chg1m)}</td>
+                        <td className={`table-right text-sm ${pctColor(chg1d)}`}>{pct(chg1d)}</td>
+                        <td className={`table-right text-sm ${pctColor(chg1w)}`}>{pct(chg1w)}</td>
+                        <td className={`table-right text-sm ${pctColor(chg1m)}`}>{pct(chg1m)}</td>
                       </tr>
                     )
                   })}

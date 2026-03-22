@@ -17,7 +17,8 @@ export default async function TaxonomiesPage() {
     <>
       <div className="page-header flex-between">
         <div>
-          <h1 className="page-title">Asset Allocation</h1>
+          <h1 className="page-title">Segments</h1>
+          <p className="page-subtitle" style={{ marginTop: 4 }}>Classify your holdings by Sector, Market Cap, Asset Type and more</p>
           <p className="page-subtitle">Taxonomies for classifying your investments</p>
         </div>
         <Link href="/taxonomies/new" className="btn btn-primary">+ New Taxonomy</Link>

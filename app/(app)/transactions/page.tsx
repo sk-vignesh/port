@@ -87,10 +87,10 @@ export default async function TransactionsPage() {
                       ? (tx.accounts as unknown as { name: string } | null)?.name
                       : (tx.portfolios as unknown as { name: string } | null)?.name}
                   </td>
-                  <td className="table-right font-mono text-sm text-muted">
+                  <td className="table-right text-sm text-muted">
                     {'shares' in tx && tx.shares ? formatShares(tx.shares) : '—'}
                   </td>
-                  <td className="table-right font-mono text-sm">
+                  <td className="table-right text-sm">
                     {formatAmount(tx.amount, tx.currency_code)}
                   </td>
                 </tr>

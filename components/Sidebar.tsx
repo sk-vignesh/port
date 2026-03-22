@@ -1,46 +1,52 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import {
-  LayoutDashboard, TrendingUp, Wallet, Briefcase, ArrowLeftRight,
-  Star, CalendarClock, Network, PanelLeftClose, PanelLeftOpen, BarChart3,
+  LayoutDashboard, Wallet, ArrowLeftRight, CalendarClock,
+  BarChart3, Star, Layers, PanelLeftClose, PanelLeftOpen,
+  ChevronDown, ChevronRight, TrendingUp, Settings,
 } from 'lucide-react'
 
-const navGroups = [
+interface Portfolio { id: string; name: string }
+
+// ── Colorful icon wrappers ──────────────────────────────────────────────────
+const IconWrap = ({ color, children }: { color: string; children: React.ReactNode }) => (
+  <span style={{
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: 28, height: 28, borderRadius: 7, background: `${color}22`, flexShrink: 0,
+  }}>
+    <span style={{ color }}>{children}</span>
+  </span>
+)
+
+const navItems = [
   {
     label: 'Overview',
     items: [
-      { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: 'Investments',
-    items: [
-      { href: '/securities', label: 'Securities', icon: TrendingUp },
-      { href: '/portfolios', label: 'Portfolios', icon: Briefcase },
-      { href: '/accounts', label: 'Accounts', icon: Wallet },
+      { href: '/',          label: 'Dashboard',    icon: <LayoutDashboard size={15} />,    color: '#3b82f6' },
+      { href: '/accounts',  label: 'Accounts',     icon: <Wallet size={15} />,             color: '#14b8a6' },
     ],
   },
   {
     label: 'Activity',
     items: [
-      { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-      { href: '/plans', label: 'Plans', icon: CalendarClock },
+      { href: '/transactions', label: 'Transactions', icon: <ArrowLeftRight size={15} />, color: '#a855f7' },
+      { href: '/plans',        label: 'Plans',         icon: <CalendarClock size={15} />,  color: '#f59e0b' },
     ],
   },
   {
     label: 'Analysis',
     items: [
-      { href: '/reports',    label: 'Reports',    icon: BarChart3 },
-      { href: '/watchlists', label: 'Watchlists', icon: Star },
-      { href: '/taxonomies', label: 'Taxonomies', icon: Network },
+      { href: '/reports',    label: 'Reports',    icon: <BarChart3 size={15} />, color: '#f97316' },
+      { href: '/watchlists', label: 'Watchlists', icon: <Star size={15} />,     color: '#ec4899' },
+      { href: '/taxonomies', label: 'Segments',   icon: <Layers size={15} />,   color: '#6366f1' },
     ],
   },
 ]
 
-// SVG logo mark
 function LogoMark({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -51,93 +57,157 @@ function LogoMark({ size = 32 }: { size?: number }) {
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="8" fill="url(#lg1)" />
-      {/* Candlestick bars */}
-      <rect x="6" y="18" width="4" height="8" rx="1" fill="white" fillOpacity="0.9" />
-      <rect x="14" y="10" width="4" height="16" rx="1" fill="white" fillOpacity="0.9" />
-      <rect x="22" y="14" width="4" height="12" rx="1" fill="white" fillOpacity="0.9" />
-      {/* Trend line */}
-      <polyline points="8,17 16,9 24,13" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" strokeOpacity="0.7" />
+      <polyline points="6,22 12,14 18,18 26,8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <circle cx="26" cy="8" r="2.5" fill="white" />
     </svg>
   )
 }
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const router   = useRouter()
+  const [collapsed, setCollapsed]     = useState(false)
+  const [portfolios, setPortfolios]   = useState<Portfolio[]>([])
+  const [portOpen, setPortOpen]       = useState(true)
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname.startsWith(href)
+  // Fetch portfolios client-side for sidebar list
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('portfolios').select('id, name').eq('is_retired', false).order('name')
+      .then(({ data }) => { if (data) setPortfolios(data) })
+  }, [])
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href)
+
+  const NavLink = ({ href, label, icon, color }: { href: string; label: string; icon: React.ReactNode; color: string }) => {
+    const active = isActive(href)
+    return (
+      <Link href={href} style={{
+        display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10,
+        padding: collapsed ? '8px 0' : '7px 10px', borderRadius: 8,
+        background: active ? `${color}18` : 'transparent',
+        border: active ? `1px solid ${color}30` : '1px solid transparent',
+        color: active ? color : 'var(--color-text-secondary)',
+        fontWeight: active ? 600 : 500,
+        fontSize: '0.82rem', textDecoration: 'none',
+        transition: 'all 0.15s', cursor: 'pointer',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+      }}
+      title={collapsed ? label : undefined}>
+        <IconWrap color={color}>{icon}</IconWrap>
+        {!collapsed && <span style={{ lineHeight: 1 }}>{label}</span>}
+      </Link>
+    )
   }
 
-  const w = collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)'
-
   return (
-    <>
-      {/* Push main content aside via a CSS variable override */}
-      <style>{`:root { --sidebar-current: ${collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)'}; }`}</style>
-      <aside
-        className="sidebar"
-        style={{ width: w, overflow: collapsed ? 'visible' : 'hidden' }}
-      >
-        {/* Header — matches topbar height */}
-        <div className="sidebar-logo" style={{ height: 'var(--topbar-height)', padding: '0 16px', gap: 10 }}>
-          <LogoMark size={30} />
+    <aside style={{
+      width: collapsed ? 64 : 220,
+      minHeight: '100vh',
+      background: 'var(--color-bg-elevated)',
+      borderRight: '1px solid var(--color-border)',
+      display: 'flex', flexDirection: 'column',
+      transition: 'width 0.25s cubic-bezier(.4,0,.2,1)',
+      overflow: 'hidden', flexShrink: 0,
+    }}>
+
+      {/* Logo */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '18px 0' : '18px 16px',
+        borderBottom: '1px solid var(--color-border)', justifyContent: collapsed ? 'center' : 'flex-start',
+      }}>
+        <LogoMark size={30} />
+        {!collapsed && (
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '0.9rem', letterSpacing: '-0.01em', color: 'var(--color-text-primary)' }}>Folio</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Portfolio Tracker</div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: collapsed ? '12px 8px' : '12px 10px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Portfolios — dynamic section */}
+        <div>
           {!collapsed && (
-            <div style={{ overflow: 'hidden' }}>
-              <div className="sidebar-logo-text">Portfolio</div>
-              <div className="sidebar-logo-sub">Performance</div>
+            <div
+              onClick={() => setPortOpen(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '2px 6px 6px', cursor: 'pointer',
+                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '0.1em', color: 'var(--color-text-muted)',
+              }}>
+              <span>Portfolios</span>
+              {portOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </div>
           )}
-          <button
-            onClick={() => setCollapsed(c => !c)}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            style={{
-              marginLeft: 'auto',
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-text-muted)',
-              cursor: 'pointer',
-              padding: 4,
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexShrink: 0,
-            }}
-          >
-            {collapsed
-              ? <PanelLeftOpen size={16} />
-              : <PanelLeftClose size={16} />
-            }
-          </button>
+          {portOpen && portfolios.map(p => {
+            const active = pathname.startsWith(`/portfolios/${p.id}`)
+            return (
+              <Link key={p.id} href={`/portfolios/${p.id}`} style={{
+                display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10,
+                padding: collapsed ? '8px 0' : '7px 10px', borderRadius: 8,
+                background: active ? '#22c55e18' : 'transparent',
+                border: active ? '1px solid #22c55e30' : '1px solid transparent',
+                color: active ? '#22c55e' : 'var(--color-text-secondary)',
+                fontWeight: active ? 600 : 500,
+                fontSize: '0.82rem', textDecoration: 'none',
+                transition: 'all 0.15s',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+              }}
+              title={collapsed ? p.name : undefined}>
+                <IconWrap color="#22c55e"><TrendingUp size={15} /></IconWrap>
+                {!collapsed && (
+                  <span style={{ lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.name}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+          {portOpen && portfolios.length === 0 && !collapsed && (
+            <Link href="/portfolios" style={{
+              display: 'block', padding: '6px 10px', fontSize: '0.78rem',
+              color: 'var(--color-text-muted)', textDecoration: 'none',
+              borderRadius: 6, border: '1px dashed var(--color-border)',
+              textAlign: 'center', marginTop: 4,
+            }}>+ Add Portfolio</Link>
+          )}
         </div>
 
-        {/* Nav */}
-        <nav className="sidebar-nav">
-          {navGroups.map((group) => (
-            <div key={group.label}>
-              {!collapsed && (
-                <div className="sidebar-section-label">{group.label}</div>
-              )}
-              {collapsed && <div style={{ height: 10 }} />}
-              {group.items.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  title={collapsed ? label : undefined}
-                  className={`sidebar-item ${isActive(href) ? 'active' : ''}`}
-                  style={collapsed ? { justifyContent: 'center', padding: '10px 0', margin: '2px 8px' } : {}}
-                >
-                  <Icon size={18} style={{ flexShrink: 0 }} />
-                  {!collapsed && label}
-                </Link>
+        {/* Static sections */}
+        {navItems.map(group => (
+          <div key={group.label}>
+            {!collapsed && (
+              <div style={{
+                padding: '2px 6px 6px', fontSize: '0.65rem', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-muted)',
+              }}>{group.label}</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {group.items.map(item => (
+                <NavLink key={item.href} {...item} />
               ))}
             </div>
-          ))}
-        </nav>
-      </aside>
+          </div>
+        ))}
+      </div>
 
-      {/* Dynamic margin for main content */}
-      <style>{`.main-content { margin-left: ${w}; }`}</style>
-    </>
+      {/* Settings + collapse */}
+      <div style={{ padding: collapsed ? '12px 8px' : '12px 10px', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <NavLink href="/settings" label="Settings" icon={<Settings size={15} />} color="#64748b" />
+        <button onClick={() => setCollapsed(v => !v)} style={{
+          display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-end',
+          gap: 6, padding: '8px 6px', background: 'none', border: 'none',
+          cursor: 'pointer', color: 'var(--color-text-muted)', width: '100%',
+          borderRadius: 6, transition: 'color 0.15s',
+        }} title={collapsed ? 'Expand' : 'Collapse'}>
+          {collapsed ? <PanelLeftOpen size={16} /> : <><span style={{ fontSize: '0.72rem' }}>Collapse</span><PanelLeftClose size={16} /></>}
+        </button>
+      </div>
+    </aside>
   )
 }
