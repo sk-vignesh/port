@@ -113,40 +113,34 @@ def main():
     # Normalize column names to UPPER STRIP
     df.columns = [c.strip().upper() for c in df.columns]
 
-    print(f"  Bhav copy columns: {list(df.columns)}")
-    print(f"  Total rows: {len(df)}")
+    # NSE bhav copy uses abbreviated column names (verified from live data):
+    #   TCKRSYMB  = NSE ticker symbol
+    #   SCTYSRS   = Security series (EQ, BE, N1, etc.)
+    #   CLSPRIC   = Official closing price
+    #   PRVSCLSGPRIC = Previous closing price
+    COL_SYMBOL = "TCKRSYMB"
+    COL_SERIES = "SCTYSRS"
+    COL_CLOSE  = "CLSPRIC"
+    COL_PREV   = "PRVSCLSGPRIC"
 
-    # Filter to EQ (equity) series only — but only if the SERIES column exists.
-    # Some nselib versions / dates return pre-filtered or differently structured data.
-    if "SERIES" in df.columns:
-        df = df[df["SERIES"] == "EQ"].copy()
-        print(f"  EQ rows: {len(df)}")
+    # Filter to equity series only if the series column is present
+    if COL_SERIES in df.columns:
+        df = df[df[COL_SERIES] == "EQ"].copy()
+        print(f"  EQ rows after series filter: {len(df)}")
     else:
-        print("  ⚠  No SERIES column found — using all rows as-is")
+        print("  ⚠  No series column (SCTYSRS) — using all rows")
         df = df.copy()
 
-    # Possible alternate column names across nselib versions
-    # Map each logical field to candidate column names in priority order
-    COL_CLOSE = ["CLOSE", "CLOSE PRICE", "CLOSEPRICE", "LAST", "LASTPRICE"]
-    COL_PREV  = ["PREVCLOSE", "PREV CLOSE", "PREVIOUSCLOSE", "PREVIOUS CLOSE"]
-
-    def pick_col(df, candidates):
-        for c in candidates:
-            if c in df.columns:
-                return c
-        return None
-
-    col_close = pick_col(df, COL_CLOSE)
-    col_prev  = pick_col(df, COL_PREV)
-
-    if not col_close:
-        print(f"  ERROR: cannot find a close-price column. Available: {list(df.columns)}")
+    if COL_CLOSE not in df.columns:
+        print(f"  ERROR: CLSPRIC not found. Columns: {list(df.columns)}")
         sys.exit(1)
 
-    print(f"  Using close col='{col_close}', prev_close col='{col_prev}'")
+    if COL_SYMBOL not in df.columns:
+        print(f"  ERROR: TCKRSYMB not found. Columns: {list(df.columns)}")
+        sys.exit(1)
 
     for _, row in df.iterrows():
-        sym = str(row.get("SYMBOL", "")).strip().upper()
+        sym = str(row.get(COL_SYMBOL, "")).strip().upper()
         if sym:
             nse_lookup[sym] = row
 
@@ -178,11 +172,11 @@ def main():
             continue
 
         # --- Extract prices ---------------------------------------------------
-        close_price = to_float(row.get(col_close))
-        prev_close  = to_float(row.get(col_prev)) if col_prev else None
+        close_price = to_float(row.get(COL_CLOSE))
+        prev_close  = to_float(row.get(COL_PREV))
 
         if close_price is None or close_price <= 0:
-            print(f"  ⚠  {nse_sym}: invalid close price ({row.get('CLOSE')}) — skipped")
+            print(f"  ⚠  {nse_sym}: invalid close price ({row.get(COL_CLOSE)}) — skipped")
             skipped += 1
             continue
 
