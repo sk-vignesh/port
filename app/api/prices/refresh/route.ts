@@ -14,11 +14,21 @@ const RATE_LIMIT_HOURS = 2
  * The daily cron (Supabase pg_cron) calls this with no parameters to refresh all.
  */
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { searchParams } = new URL(request.url)
+  const secret = searchParams.get('secret')
+
+  // Allow either a cron secret (for pg_cron) or a logged-in Supabase session
+  const cronSecret = process.env.CRON_SECRET
+  const calledByCron = cronSecret && secret === cronSecret
+
+  if (!calledByCron) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Use service-role supabase for DB writes (cron has no user session)
+  const supabase = await createClient()
   const singleId = searchParams.get('security_id')
 
   // Fetch securities to update
