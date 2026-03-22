@@ -109,36 +109,35 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
   // ── Column definitions ────────────────────────────────────────────────────
   const colDefs: ColDef[] = useMemo((): ColDef[] => [
     {
-      field: 'symbol', headerName: 'Symbol', pinned: 'left', width: 130,
-      cellStyle: { fontWeight: 700, color: 'var(--color-accent-light)', letterSpacing: '0.04em' },
+      field: 'symbol', headerName: 'Symbol', pinned: 'left', width: 120,
+      cellStyle: { color: 'var(--color-accent-light)' },
     },
     {
-      field: 'prev_close', headerName: 'Prev Close', type: 'numericColumn',
+      field: 'prev_close', headerName: 'Prev Close', type: 'numericColumn', width: 120,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-text-muted)' },
     },
     {
-      field: 'open_price', headerName: 'Open', type: 'numericColumn',
+      field: 'open_price', headerName: 'Open', type: 'numericColumn', width: 110,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-text-muted)' },
     },
     {
-      field: 'high_price', headerName: 'High', type: 'numericColumn',
+      field: 'high_price', headerName: 'High', type: 'numericColumn', width: 110,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
-      cellStyle: { color: 'var(--color-success)', fontWeight: 500 },
+      cellStyle: { color: 'var(--color-success)' },
     },
     {
-      field: 'low_price', headerName: 'Low', type: 'numericColumn',
+      field: 'low_price', headerName: 'Low', type: 'numericColumn', width: 110,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
-      cellStyle: { color: 'var(--color-danger)', fontWeight: 500 },
+      cellStyle: { color: 'var(--color-danger)' },
     },
     {
-      field: 'close_price', headerName: 'Close', type: 'numericColumn',
+      field: 'close_price', headerName: 'Close', type: 'numericColumn', width: 120,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
-      cellStyle: { fontWeight: 700 },
     },
     {
-      colId: 'chg', headerName: 'Change', type: 'numericColumn', sortable: false,
+      colId: 'chg', headerName: 'Change', type: 'numericColumn', width: 120, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
         if (!p.data) return null
         const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
@@ -148,7 +147,7 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
       cellRenderer: ChangeAmtRenderer,
     },
     {
-      colId: 'pct', headerName: '% Change', type: 'numericColumn', sortable: false,
+      colId: 'pct', headerName: '% Change', type: 'numericColumn', width: 110, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
         if (!p.data) return null
         const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
@@ -158,14 +157,10 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
       cellRenderer: ChangeCellRenderer,
     },
     {
-      field: 'volume', headerName: 'Volume', type: 'numericColumn',
+      field: 'volume', headerName: 'Volume', type: 'numericColumn', width: 130,
       valueFormatter: (p: ValueFormatterParams) =>
         p.value != null ? (p.value as number).toLocaleString('en-IN') : '—',
       cellStyle: { color: 'var(--color-text-muted)' },
-    },
-    {
-      field: 'isin', headerName: 'ISIN', width: 150, sortable: false,
-      cellStyle: { color: 'var(--color-text-muted)', fontSize: '11px' },
     },
   ], [])
 
