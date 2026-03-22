@@ -55,7 +55,7 @@ export default function SecuritiesGrid({ rows }: Props) {
         if (el) { e.preventDefault(); router.push(`/securities/${el.dataset.id}`) }
       }}
     >
-      <AppGrid<SecurityRow>
+      <AppGrid
         rowData={rows}
         columnDefs={colDefs}
         exportFilename="securities"

@@ -17,8 +17,6 @@ const appTheme = themeQuartz.withParams({
   rowHoverColor:          '#1e2d4a',
   selectedRowBackgroundColor: '#1e3a5f',
   headerBackgroundColor:  '#151f32',
-  headerForegroundColor:  '#94a3b8',
-  headerColumnResizeHandleColor: '#334155',
   oddRowBackgroundColor:  '#0f172a',
   inputFocusBorder:       '1px solid #3b82f6',
   fontFamily:             'Inter, system-ui, sans-serif',

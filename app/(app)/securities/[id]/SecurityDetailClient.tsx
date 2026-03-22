@@ -110,7 +110,7 @@ export default function SecurityDetailClient({ securityId, currency, prices, tra
                 <YAxis domain={[minV, maxV]} tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => `₹${(v/1).toFixed(0)}`} width={70} />
                 <Tooltip
                   contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [fmtPrice(v, currency), 'Price']}
+                  formatter={((v: number) => [fmtPrice(v, currency), 'Price']) as never}
                   labelStyle={{ color: '#94a3b8' }}
                 />
                 <Area type="monotone" dataKey="value" stroke={isUp ? '#22c55e' : '#ef4444'} strokeWidth={2} fill="url(#chartGrad)" dot={false} />
