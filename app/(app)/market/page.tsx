@@ -2,79 +2,64 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 export const dynamic = 'force-dynamic'
 
-const fmtPrice = (v: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
-
-const fmtPct = (v: number) =>
-  `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`
-
 export default async function MarketPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // Securities this user owns
-  const { data: securities } = await supabase
-    .from('securities')
-    .select('id, name, ticker_symbol')
-    .eq('user_id', user.id)
-    .eq('is_retired', false)
-    .order('name')
+  // Get the most recent date we have data for
+  const { data: latestDateRow } = await supabase
+    .from('nse_market_data')
+    .select('date')
+    .order('date', { ascending: false })
+    .limit(1)
+    .single()
 
-  const secIds = securities?.map(s => s.id) ?? []
+  const latestDate = latestDateRow?.date ?? null
 
-  // Latest prices + last date we have a price row for
-  const [{ data: latestPrices }, { data: lastDates }] = await Promise.all([
-    secIds.length > 0
-      ? supabase.from('security_latest_prices').select('security_id, value, previous_close').in('security_id', secIds)
-      : Promise.resolve({ data: [] }),
-    secIds.length > 0
-      ? supabase.from('security_prices').select('security_id, date').in('security_id', secIds).order('date', { ascending: false })
-      : Promise.resolve({ data: [] }),
-  ])
+  // Fetch all symbols for that date, sorted by absolute % change
+  const { data: rows } = latestDate
+    ? await supabase
+        .from('nse_market_data')
+        .select('symbol, close_price, prev_close, open_price, high_price, low_price, volume, isin')
+        .eq('date', latestDate)
+        .order('symbol')
+    : { data: [] }
 
-  const priceMap = new Map((latestPrices ?? []).map(p => [p.security_id, p]))
+  const enriched = ((rows ?? []) as {
+    symbol: string; close_price: number; prev_close: number | null;
+    open_price: number | null; high_price: number | null; low_price: number | null;
+    volume: number | null; isin: string | null
+  }[]).map(r => {
+    const chg = r.close_price !== null && r.prev_close !== null ? r.close_price - r.prev_close : null
+    const pct = chg !== null && r.prev_close ? (chg / r.prev_close) * 100 : null
+    return { ...r, chg, pct }
+  }).sort((a, b) => Math.abs(b.pct ?? 0) - Math.abs(a.pct ?? 0))
 
-  // Only want the most-recent date per security
-  const dateMap = new Map<string, string>()
-  for (const row of (lastDates ?? [])) {
-    if (!dateMap.has(row.security_id)) dateMap.set(row.security_id, row.date)
-  }
+  const fmtINR = (v: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
 
-  const rows = (securities ?? []).map(sec => {
-    const lp = priceMap.get(sec.id)
-    const close = lp ? lp.value / 100 : null
-    const prev  = lp?.previous_close ? lp.previous_close / 100 : null
-    const chg   = close !== null && prev !== null ? close - prev : null
-    const pct   = chg !== null && prev ? (chg / prev) * 100 : null
-    const date  = dateMap.get(sec.id) ?? null
-    return { ...sec, close, prev, chg, pct, date }
-  }).sort((a, b) => {
-    // Sort by absolute % change descending (most moved first), unknowns last
-    const av = Math.abs(a.pct ?? -Infinity)
-    const bv = Math.abs(b.pct ?? -Infinity)
-    return bv - av
-  })
-
-  const hasAnyPrices = rows.some(r => r.close !== null)
+  const fmtDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
 
   return (
     <>
       <div className="page-header flex-between">
         <div>
-          <h1 className="page-title">Market Prices</h1>
-          <p className="page-subtitle">NSE end-of-day closing prices · updated nightly at 00:30 UTC</p>
+          <h1 className="page-title">Market</h1>
+          <p className="page-subtitle">
+            NSE EQ segment · {enriched.length} securities
+            {latestDate ? ` · ${fmtDate(latestDate)}` : ''}
+          </p>
         </div>
       </div>
 
-      {!hasAnyPrices ? (
+      {!latestDate || enriched.length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <div className="empty-state-icon">📡</div>
             <div className="empty-state-title">No price data yet</div>
-            <div className="empty-state-text">
-              End-of-day prices will appear here once they are available.
-            </div>
+            <div className="empty-state-text">End-of-day prices will appear here once they are available.</div>
           </div>
         </div>
       ) : (
@@ -84,50 +69,49 @@ export default async function MarketPage() {
               <thead>
                 <tr>
                   <th>Symbol</th>
-                  <th>Security</th>
                   <th className="table-right">Prev Close</th>
-                  <th className="table-right">Last Close</th>
+                  <th className="table-right">Open</th>
+                  <th className="table-right">High</th>
+                  <th className="table-right">Low</th>
+                  <th className="table-right">Close</th>
                   <th className="table-right">Change</th>
                   <th className="table-right">% Change</th>
-                  <th className="table-right">Date</th>
+                  <th className="table-right">Volume</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(row => {
-                  const isUp   = (row.chg ?? 0) > 0
-                  const isDown = (row.chg ?? 0) < 0
-                  const chgClass = isUp ? 'amount-positive' : isDown ? 'amount-negative' : ''
-
+                {enriched.map(r => {
+                  const isUp = (r.chg ?? 0) > 0
+                  const isDown = (r.chg ?? 0) < 0
+                  const cls = isUp ? 'amount-positive' : isDown ? 'amount-negative' : ''
                   return (
-                    <tr key={row.id}>
-                      <td>
-                        <span style={{
-                          fontWeight: 700, fontSize: '0.82rem',
-                          color: 'var(--color-accent-light)',
-                          letterSpacing: '0.02em',
-                        }}>
-                          {row.ticker_symbol ?? '—'}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                        {row.name}
+                    <tr key={r.symbol}>
+                      <td style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-accent-light)', letterSpacing: '0.02em' }}>
+                        {r.symbol}
                       </td>
                       <td className="table-right text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                        {row.prev !== null ? fmtPrice(row.prev) : '—'}
+                        {r.prev_close != null ? fmtINR(r.prev_close) : '—'}
+                      </td>
+                      <td className="table-right text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                        {r.open_price != null ? fmtINR(r.open_price) : '—'}
+                      </td>
+                      <td className="table-right text-sm amount-positive">
+                        {r.high_price != null ? fmtINR(r.high_price) : '—'}
+                      </td>
+                      <td className="table-right text-sm amount-negative">
+                        {r.low_price != null ? fmtINR(r.low_price) : '—'}
                       </td>
                       <td className="table-right text-sm" style={{ fontWeight: 600 }}>
-                        {row.close !== null ? fmtPrice(row.close) : '—'}
+                        {fmtINR(r.close_price)}
                       </td>
-                      <td className={`table-right text-sm ${chgClass}`}>
-                        {row.chg !== null ? (row.chg >= 0 ? '+' : '') + fmtPrice(row.chg) : '—'}
+                      <td className={`table-right text-sm ${cls}`}>
+                        {r.chg != null ? (r.chg >= 0 ? '+' : '') + fmtINR(r.chg) : '—'}
                       </td>
-                      <td className={`table-right text-sm ${chgClass}`} style={{ fontWeight: 600 }}>
-                        {row.pct !== null ? fmtPct(row.pct) : '—'}
+                      <td className={`table-right text-sm ${cls}`} style={{ fontWeight: 600 }}>
+                        {r.pct != null ? `${r.pct >= 0 ? '+' : ''}${r.pct.toFixed(2)}%` : '—'}
                       </td>
-                      <td className="table-right text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {row.date
-                          ? new Date(row.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
-                          : '—'}
+                      <td className="table-right text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                        {r.volume != null ? r.volume.toLocaleString('en-IN') : '—'}
                       </td>
                     </tr>
                   )
@@ -135,13 +119,12 @@ export default async function MarketPage() {
               </tbody>
             </table>
           </div>
-
           <div style={{
             padding: '10px 20px', fontSize: '0.72rem', color: 'var(--color-text-muted)',
-            borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 8,
+            borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8, alignItems: 'center',
           }}>
             <span>📡</span>
-            <span>Prices sourced from NSE bhav copy via nselib. Sorted by largest daily move.</span>
+            <span>NSE EQ bhav copy · sorted by largest daily move · prices in INR</span>
           </div>
         </div>
       )}

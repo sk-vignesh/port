@@ -2,22 +2,17 @@
 """
 NSE EOD Price Fetcher
 =====================
-Fetches the official end-of-day bhav copy from NSE for every active security
-in the app's Supabase database, then upserts prices into:
-  - security_prices         (historical log, one row per security per date)
-  - security_latest_prices  (current price used by the UI)
+1. Downloads the full NSE EQ bhav copy (~2400 stocks) for the last trading day.
+2. Bulk-upserts ALL rows into nse_market_data (market reference table).
+3. Also updates security_prices + security_latest_prices for the user's
+   own securities (matched by ticker_symbol).
 
-Run automatically at 00:30 UTC Mon-Fri via GitHub Actions.
-Can also be triggered manually: python scripts/fetch_nse_prices.py
+Runs at 00:30 UTC Mon-Fri via GitHub Actions.
+Manual run: python scripts/fetch_nse_prices.py
 
-Environment variables required:
-  SUPABASE_URL              - Supabase project URL
-  SUPABASE_SERVICE_ROLE_KEY - Service role key (bypasses RLS)
-
-NSE ticker symbols:
-  Store bare NSE symbols in the ticker_symbol column.
-  Examples: RELIANCE, TCS, INFY, BAJFINANCE, HDFCBANK
-  '.NS' and '.BO' suffixes are stripped automatically.
+Env vars required:
+  SUPABASE_URL
+  SUPABASE_SERVICE_ROLE_KEY
 """
 
 import os
@@ -28,57 +23,63 @@ from datetime import date, timedelta
 from nselib import capital_market
 from supabase import create_client
 
-# ── Config ───────────────────────────────────────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────────
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
-# Prices stored as integer × 100  (₹1523.45  →  152345)
-PRICE_SCALE = 100
+PRICE_SCALE    = 100   # security_prices/security_latest_prices store price × 100
+BATCH_SIZE     = 500   # rows per Supabase upsert call
+MAX_LOOKBACK   = 7     # calendar days to look back for a valid bhav copy
 
-# How many calendar days back to search for the last trading day
-MAX_LOOKBACK_DAYS = 7
+# Verified NSE bhav copy column names (from live data, Mar 2026)
+COL_SYMBOL = "TCKRSYMB"
+COL_SERIES = "SCTYSRS"
+COL_CLOSE  = "CLSPRIC"
+COL_PREV   = "PRVSCLSGPRIC"
+COL_OPEN   = "OPNPRIC"
+COL_HIGH   = "HGHPRIC"
+COL_LOW    = "LWPRIC"
+COL_VOL    = "TTLTRADGVOL"
+COL_ISIN   = "ISIN"
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def to_float(val) -> float | None:
-    """Safely convert a value (possibly a comma-formatted string) to float."""
+def to_float(val):
     try:
         return float(str(val).replace(",", "").strip())
     except (ValueError, TypeError):
         return None
 
 
-def get_last_trading_day_bhav(max_lookback: int = MAX_LOOKBACK_DAYS):
-    """
-    Walk backwards from yesterday until we find a date that has a bhav copy.
-    NSE doesn't publish bhav copies on weekends or public holidays.
-
-    Returns (trade_date_str: str, bhav_df: pd.DataFrame) or raises RuntimeError.
-    """
+def get_bhav(max_lookback=MAX_LOOKBACK):
+    """Walk backwards from yesterday to find the last valid trading day bhav."""
     for days_back in range(1, max_lookback + 1):
         candidate = date.today() - timedelta(days=days_back)
-        # Skip Sundays (NSE is closed)
-        if candidate.weekday() == 6:
+        if candidate.weekday() == 6:   # skip Sundays
             continue
         trade_date_str = candidate.strftime("%d-%m-%Y")
         try:
-            print(f"  Trying bhav copy for {trade_date_str}...", end=" ", flush=True)
+            print(f"  Trying {trade_date_str}...", end=" ", flush=True)
             df = capital_market.bhav_copy_equities(trade_date=trade_date_str)
             if df is not None and len(df) > 0:
                 print(f"✓  ({len(df)} rows)")
-                return trade_date_str, candidate, df
-            else:
-                print("empty")
+                return candidate, df
+            print("empty")
         except Exception as exc:
-            print(f"not available ({exc})")
-        # Brief pause to be polite to NSE
+            print(f"unavailable ({exc})")
         time.sleep(1)
+    raise RuntimeError(f"No bhav copy found in last {max_lookback} days.")
 
-    raise RuntimeError(
-        f"Could not find a valid NSE bhav copy in the last {max_lookback} days."
-    )
+
+def batch_upsert(supabase, table: str, rows: list, conflict: str):
+    """Upsert rows in batches to avoid request size limits."""
+    total = len(rows)
+    for i in range(0, total, BATCH_SIZE):
+        chunk = rows[i : i + BATCH_SIZE]
+        supabase.table(table).upsert(chunk, on_conflict=conflict).execute()
+        print(f"    — upserted {min(i + BATCH_SIZE, total)}/{total}", end="\r")
+    print()
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -90,129 +91,87 @@ def main():
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-    # 1. Load all active securities
-    result = (
-        supabase.table("securities")
-        .select("id, name, ticker_symbol")
-        .eq("is_retired", False)
-        .execute()
-    )
-    securities = result.data or []
-
-    if not securities:
-        print("No active securities in the database. Nothing to do.")
-        return
-
-    print(f"Found {len(securities)} active securities.\n")
-
-    # 2. Fetch NSE bhav copy (finds last trading day automatically)
+    # ── 1. Fetch bhav copy ────────────────────────────────────────────────────
     print("Fetching NSE bhav copy...")
-    trade_date_str, trade_date_obj, df = get_last_trading_day_bhav()
-    price_date = trade_date_obj.isoformat()   # YYYY-MM-DD for Supabase
+    price_date_obj, df = get_bhav()
+    price_date = price_date_obj.isoformat()
 
-    # Normalize column names to UPPER STRIP
+    # Normalize column names
     df.columns = [c.strip().upper() for c in df.columns]
 
-    # NSE bhav copy uses abbreviated column names (verified from live data):
-    #   TCKRSYMB  = NSE ticker symbol
-    #   SCTYSRS   = Security series (EQ, BE, N1, etc.)
-    #   CLSPRIC   = Official closing price
-    #   PRVSCLSGPRIC = Previous closing price
-    COL_SYMBOL = "TCKRSYMB"
-    COL_SERIES = "SCTYSRS"
-    COL_CLOSE  = "CLSPRIC"
-    COL_PREV   = "PRVSCLSGPRIC"
-
-    # Filter to equity series only if the series column is present
+    # Filter to EQ series
     if COL_SERIES in df.columns:
         df = df[df[COL_SERIES] == "EQ"].copy()
-        print(f"  EQ rows after series filter: {len(df)}")
-    else:
-        print("  ⚠  No series column (SCTYSRS) — using all rows")
-        df = df.copy()
+    print(f"  EQ securities: {len(df)}\n")
 
-    if COL_CLOSE not in df.columns:
-        print(f"  ERROR: CLSPRIC not found. Columns: {list(df.columns)}")
-        sys.exit(1)
+    # Verify required columns exist
+    for col in [COL_SYMBOL, COL_CLOSE]:
+        if col not in df.columns:
+            print(f"ERROR: expected column '{col}' not found. Got: {list(df.columns)}")
+            sys.exit(1)
 
-    if COL_SYMBOL not in df.columns:
-        print(f"  ERROR: TCKRSYMB not found. Columns: {list(df.columns)}")
-        sys.exit(1)
-
-    # Build fast lookup: NSE_SYMBOL → row
-    nse_lookup: dict = {}
+    # ── 2. Bulk-save ALL rows to nse_market_data ──────────────────────────────
+    print("Saving full bhav copy to nse_market_data...")
+    market_rows = []
     for _, row in df.iterrows():
         sym = str(row.get(COL_SYMBOL, "")).strip().upper()
-        if sym:
-            nse_lookup[sym] = row
+        close = to_float(row.get(COL_CLOSE))
+        if not sym or not close or close <= 0:
+            continue
+        market_rows.append({
+            "symbol":      sym,
+            "date":        price_date,
+            "close_price": close,
+            "prev_close":  to_float(row.get(COL_PREV)),
+            "open_price":  to_float(row.get(COL_OPEN)),
+            "high_price":  to_float(row.get(COL_HIGH)),
+            "low_price":   to_float(row.get(COL_LOW)),
+            "volume":      int(to_float(row.get(COL_VOL)) or 0) or None,
+            "isin":        str(row.get(COL_ISIN, "") or "").strip() or None,
+        })
 
-    print(f"\nProcessing {len(securities)} securities against {len(nse_lookup)} NSE EQ symbols...\n")
+    batch_upsert(supabase, "nse_market_data", market_rows, "symbol,date")
+    print(f"  ✓ {len(market_rows)} NSE EQ records saved for {price_date}\n")
 
-    updated = 0
-    skipped = 0
+    # Build fast symbol lookup for step 3
+    nse_lookup = {r["symbol"]: r for r in market_rows}
 
+    # ── 3. Update security_prices + security_latest_prices for user's stocks ──
+    print("Updating user portfolio prices...")
+    result = supabase.table("securities").select("id, name, ticker_symbol").eq("is_retired", False).execute()
+    securities = result.data or []
+
+    updated = skipped = 0
     for sec in securities:
-        raw_ticker = (sec.get("ticker_symbol") or "").strip()
-        # Strip exchange suffixes users might have typed
-        nse_sym = (
-            raw_ticker
-            .replace(".NS", "")
-            .replace(".BO", "")
-            .replace(".BSE", "")
-            .upper()
-        )
-
+        raw = (sec.get("ticker_symbol") or "").strip()
+        nse_sym = raw.replace(".NS", "").replace(".BO", "").replace(".BSE", "").upper()
         if not nse_sym:
-            print(f"  ⚠  {sec['name']}: no ticker symbol — skipped")
-            skipped += 1
-            continue
+            skipped += 1; continue
 
-        row = nse_lookup.get(nse_sym)
-        if row is None:
-            print(f"  ⚠  {nse_sym} ({sec['name']}): not found in NSE EQ bhav copy — skipped")
-            skipped += 1
-            continue
+        mkt = nse_lookup.get(nse_sym)
+        if not mkt:
+            print(f"  ⚠  {nse_sym} ({sec['name']}): not in NSE EQ data — skipped")
+            skipped += 1; continue
 
-        # --- Extract prices ---------------------------------------------------
-        close_price = to_float(row.get(COL_CLOSE))
-        prev_close  = to_float(row.get(COL_PREV))
+        close_int     = round(mkt["close_price"] * PRICE_SCALE)
+        prev_close_int = round(mkt["prev_close"] * PRICE_SCALE) if mkt["prev_close"] else None
 
-        if close_price is None or close_price <= 0:
-            print(f"  ⚠  {nse_sym}: invalid close price ({row.get(COL_CLOSE)}) — skipped")
-            skipped += 1
-            continue
-
-        price_int      = round(close_price * PRICE_SCALE)
-        prev_close_int = round(prev_close  * PRICE_SCALE) if prev_close is not None else None
-
-        sec_id = sec["id"]
-
-        # --- Upsert security_prices (historical log) --------------------------
         supabase.table("security_prices").upsert(
-            {"security_id": sec_id, "date": price_date, "value": price_int},
+            {"security_id": sec["id"], "date": price_date, "value": close_int},
             on_conflict="security_id,date",
         ).execute()
 
-        # --- Upsert security_latest_prices ------------------------------------
-        latest_payload: dict = {
-            "security_id": sec_id,
-            "date":        price_date,
-            "value":       price_int,
-        }
-        if prev_close_int is not None:
-            latest_payload["previous_close"] = prev_close_int
+        latest = {"security_id": sec["id"], "date": price_date, "value": close_int}
+        if prev_close_int:
+            latest["previous_close"] = prev_close_int
+        supabase.table("security_latest_prices").upsert(latest, on_conflict="security_id").execute()
 
-        supabase.table("security_latest_prices").upsert(
-            latest_payload,
-            on_conflict="security_id",
-        ).execute()
-
-        print(f"  ✓  {nse_sym}: ₹{close_price:,.2f}"
-              + (f"  (prev ₹{prev_close:,.2f})" if prev_close else ""))
+        print(f"  ✓  {nse_sym}: ₹{mkt['close_price']:,.2f}" +
+              (f"  (prev ₹{mkt['prev_close']:,.2f})" if mkt["prev_close"] else ""))
         updated += 1
 
     print(f"\n{'─'*50}")
-    print(f"Done.  Updated: {updated}   Skipped: {skipped}   Date: {price_date}")
+    print(f"Done.  NSE records: {len(market_rows)}   Portfolio updated: {updated}   Skipped: {skipped}")
 
 
 if __name__ == "__main__":
