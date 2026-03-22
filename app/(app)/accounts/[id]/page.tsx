@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { formatAmount, formatDate, ACCOUNT_TX_LABELS, txBadgeClass } from '@/lib/format'
 export const dynamic = 'force-dynamic'
 
-export default async function AccountDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function AccountDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')

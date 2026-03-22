@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { formatAmount, formatShares, formatDate, txBadgeClass, PORTFOLIO_TX_LABELS } from '@/lib/format'
 export const dynamic = 'force-dynamic'
 
-export default async function PortfolioDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function PortfolioDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
