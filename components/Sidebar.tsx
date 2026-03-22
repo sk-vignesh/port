@@ -1,11 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import {
   LayoutDashboard, TrendingUp, Wallet, Briefcase, ArrowLeftRight,
-  Star, CalendarClock, Network, Settings, LogOut, ChevronRight
+  Star, CalendarClock, Network, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 
 const navGroups = [
@@ -27,82 +27,116 @@ const navGroups = [
     label: 'Activity',
     items: [
       { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-      { href: '/plans', label: 'Investment Plans', icon: CalendarClock },
+      { href: '/plans', label: 'Plans', icon: CalendarClock },
     ],
   },
   {
     label: 'Analysis',
     items: [
       { href: '/watchlists', label: 'Watchlists', icon: Star },
-      { href: '/taxonomies', label: 'Asset Allocation', icon: Network },
+      { href: '/taxonomies', label: 'Allocation', icon: Network },
     ],
   },
 ]
 
+// SVG logo mark
+function LogoMark({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#8b5cf6" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill="url(#lg1)" />
+      {/* Candlestick bars */}
+      <rect x="6" y="18" width="4" height="8" rx="1" fill="white" fillOpacity="0.9" />
+      <rect x="14" y="10" width="4" height="16" rx="1" fill="white" fillOpacity="0.9" />
+      <rect x="22" y="14" width="4" height="12" rx="1" fill="white" fillOpacity="0.9" />
+      {/* Trend line */}
+      <polyline points="8,17 16,9 24,13" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" strokeOpacity="0.7" />
+    </svg>
+  )
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
-  const supabase = createClient()
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
-  }
+  const [collapsed, setCollapsed] = useState(false)
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
   }
 
+  const w = collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)'
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">📈</div>
-        <div>
-          <div className="sidebar-logo-text">Portfolio</div>
-          <div className="sidebar-logo-sub">Performance</div>
+    <>
+      {/* Push main content aside via a CSS variable override */}
+      <style>{`:root { --sidebar-current: ${collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)'}; }`}</style>
+      <aside
+        className="sidebar"
+        style={{ width: w, overflow: collapsed ? 'visible' : 'hidden' }}
+      >
+        {/* Header — matches topbar height */}
+        <div className="sidebar-logo" style={{ height: 'var(--topbar-height)', padding: '0 16px', gap: 10 }}>
+          <LogoMark size={30} />
+          {!collapsed && (
+            <div style={{ overflow: 'hidden' }}>
+              <div className="sidebar-logo-text">Portfolio</div>
+              <div className="sidebar-logo-sub">Performance</div>
+            </div>
+          )}
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              marginLeft: 'auto',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-muted)',
+              cursor: 'pointer',
+              padding: 4,
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexShrink: 0,
+            }}
+          >
+            {collapsed
+              ? <PanelLeftOpen size={16} />
+              : <PanelLeftClose size={16} />
+            }
+          </button>
         </div>
-      </div>
 
-      <nav className="sidebar-nav">
-        {navGroups.map((group) => (
-          <div key={group.label}>
-            <div className="sidebar-section-label">{group.label}</div>
-            {group.items.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`sidebar-item ${isActive(href) ? 'active' : ''}`}
-              >
-                <Icon className="sidebar-item-icon" size={18} />
-                {label}
-                {isActive(href) && (
-                  <ChevronRight size={14} style={{ marginLeft: 'auto', opacity: 0.5 }} />
-                )}
-              </Link>
-            ))}
-          </div>
-        ))}
-      </nav>
+        {/* Nav */}
+        <nav className="sidebar-nav">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              {!collapsed && (
+                <div className="sidebar-section-label">{group.label}</div>
+              )}
+              {collapsed && <div style={{ height: 10 }} />}
+              {group.items.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  title={collapsed ? label : undefined}
+                  className={`sidebar-item ${isActive(href) ? 'active' : ''}`}
+                  style={collapsed ? { justifyContent: 'center', padding: '10px 0', margin: '2px 8px' } : {}}
+                >
+                  <Icon size={18} style={{ flexShrink: 0 }} />
+                  {!collapsed && label}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
 
-      <div className="sidebar-footer">
-        <Link
-          href="/settings"
-          className={`sidebar-item ${pathname === '/settings' ? 'active' : ''}`}
-          style={{ margin: '0 0 4px' }}
-        >
-          <Settings size={18} className="sidebar-item-icon" />
-          Settings
-        </Link>
-        <button
-          onClick={handleSignOut}
-          className="sidebar-item"
-          style={{ width: '100%', background: 'none', border: 'none', margin: 0, color: 'var(--color-danger)', opacity: 0.8 }}
-        >
-          <LogOut size={18} className="sidebar-item-icon" />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+      {/* Dynamic margin for main content */}
+      <style>{`.main-content { margin-left: ${w}; }`}</style>
+    </>
   )
 }

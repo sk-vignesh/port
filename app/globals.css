@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 
 /* ============================================================
    CSS DESIGN TOKENS
@@ -37,10 +37,10 @@
   --topbar-height:        56px;
 
   /* Spacing */
-  --radius-sm:  6px;
-  --radius-md:  10px;
-  --radius-lg:  16px;
-  --radius-xl:  24px;
+  --radius-sm:  3px;
+  --radius-md:  5px;
+  --radius-lg:  8px;
+  --radius-xl:  12px;
 
   /* Shadows */
   --shadow-card:  0 4px 24px rgba(0,0,0,0.4);
@@ -86,7 +86,7 @@
 html { font-size: 15px; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   line-height: 1.6;
@@ -158,24 +158,19 @@ input, select, textarea { font-family: inherit; }
 }
 
 .sidebar-logo {
-  padding: 22px 20px;
+  height: var(--topbar-height);
+  padding: 0 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .sidebar-logo-icon {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
-  font-size: 16px;
-  box-shadow: 0 0 16px rgba(59,130,246,0.4);
 }
 
 .sidebar-logo-text {
