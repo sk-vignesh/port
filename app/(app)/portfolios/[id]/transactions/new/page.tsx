@@ -76,6 +76,10 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
       currency_code: selected.currency, date, note: note || null,
     })
     if (err) { setError(err.message); setLoading(false); return }
+
+    // Fire-and-forget price fetch — no await, price will be ready when portfolio page loads
+    fetch(`/api/prices/refresh?id=${selected.id}`).catch(() => {})
+
     router.push(`/portfolios/${params.id}`)
   }
 
