@@ -45,14 +45,14 @@ export default function NewSecurityEventPage({ params }: { params: { id: string 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError(null)
-    const { error: err } = await supabase.from('security_events').insert({
+    const { error: err } = await (supabase.from('security_events' as never) as ReturnType<typeof supabase.from>).insert({
       security_id: params.id,
       type,
       date,
-      details: buildDetails(),
+      details: buildDetails() as never,
       note: note.trim() || null,
-    })
-    if (err) { setError(err.message); setLoading(false); return }
+    } as never)
+    if (err) { setError((err as { message: string }).message); setLoading(false); return }
     router.push(`/securities/${params.id}`)
   }
 

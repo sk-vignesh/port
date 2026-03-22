@@ -17,7 +17,6 @@ export default function EditWatchlistPage({ params }: { params: { id: string } }
   const router = useRouter()
   const supabase = createClient()
   const [name, setName] = useState('')
-  const [note, setNote] = useState('')
   const [items, setItems] = useState<WatchlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -27,11 +26,10 @@ export default function EditWatchlistPage({ params }: { params: { id: string } }
   const loadData = async () => {
     const { data } = await supabase
       .from('watchlists')
-      .select('name, note, watchlist_securities(security_id, sort_order, securities(id, name, ticker_symbol, currency_code))')
+      .select('name, watchlist_securities(security_id, sort_order, securities(id, name, ticker_symbol, currency_code))')
       .eq('id', params.id).single()
     if (data) {
       setName(data.name)
-      setNote(data.note ?? '')
       setItems((data.watchlist_securities as unknown as WatchlistItem[]) ?? [])
     }
     setLoading(false)
@@ -42,7 +40,7 @@ export default function EditWatchlistPage({ params }: { params: { id: string } }
   const saveDetails = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    await supabase.from('watchlists').update({ name: name.trim(), note: note.trim() || null }).eq('id', params.id)
+    await supabase.from('watchlists').update({ name: name.trim() }).eq('id', params.id)
     setSaving(false)
   }
 
@@ -113,10 +111,6 @@ export default function EditWatchlistPage({ params }: { params: { id: string } }
             <div className="form-group">
               <label className="form-label">Name</label>
               <input type="text" className="form-input" value={name} onChange={e => setName(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Note</label>
-              <textarea className="form-input" rows={2} value={note} onChange={e => setNote(e.target.value)} />
             </div>
             <button type="submit" className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }} disabled={saving}>
               {saving ? 'Saving…' : 'Save Name'}

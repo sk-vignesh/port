@@ -11,15 +11,16 @@ export default function NewWatchlistPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
-  const [note, setNote] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) { setError('Name is required'); return }
     setLoading(true); setError(null)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/auth/login'); return }
     const { data, error: err } = await supabase
       .from('watchlists')
-      .insert({ name: name.trim(), note: note.trim() || null })
+      .insert({ name: name.trim(), user_id: user.id })
       .select('id').single()
     if (err) { setError(err.message); setLoading(false); return }
     router.push(`/watchlists/${data.id}/edit`)
@@ -40,10 +41,6 @@ export default function NewWatchlistPage() {
             <div className="form-group">
               <label className="form-label">Name *</label>
               <input type="text" className="form-input" placeholder="e.g. Nifty 50 Watch, Tech Picks…" value={name} onChange={e => setName(e.target.value)} required autoFocus />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Note <span className="text-muted">(optional)</span></label>
-              <textarea className="form-input" rows={2} placeholder="What is this watchlist for?" value={note} onChange={e => setNote(e.target.value)} />
             </div>
           </div>
         </div>
