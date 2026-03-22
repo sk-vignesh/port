@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { formatAmount, formatDate } from '@/lib/format'
+import SecuritiesGrid from './SecuritiesGrid'
 export const dynamic = 'force-dynamic'
 
 export default async function SecuritiesPage() {
@@ -11,90 +11,55 @@ export default async function SecuritiesPage() {
 
   const { data: securities } = await supabase
     .from('securities')
-    .select('*, security_latest_prices(value, previous_close, date)')
+    .select('id, name, ticker_symbol, isin, wkn, currency_code, is_retired, updated_at, security_latest_prices(value, previous_close, date)')
     .order('name')
 
-  const active = securities?.filter(s => !s.is_retired) ?? []
-  const retired = securities?.filter(s => s.is_retired) ?? []
+  const rows = (securities ?? []).map(s => {
+    const lp = s.security_latest_prices as unknown as { value: number; previous_close: number | null; date: string } | null
+    const change = lp?.previous_close
+      ? ((lp.value - lp.previous_close) / lp.previous_close) * 100
+      : null
+    return {
+      id:          s.id,
+      name:        s.name,
+      ticker:      s.ticker_symbol ?? '',
+      isin:        s.isin ?? '',
+      currency:    s.currency_code,
+      price:       lp ? lp.value / 100 : null,
+      priceDate:   lp?.date ?? '',
+      change1d:    change,
+      status:      s.is_retired ? 'Retired' : 'Active',
+      updated:     s.updated_at?.slice(0, 10) ?? '',
+    }
+  })
+
+  const active  = rows.filter(r => r.status === 'Active').length
+  const retired = rows.filter(r => r.status === 'Retired').length
 
   return (
     <>
       <div className="page-header flex-between">
         <div>
           <h1 className="page-title">Securities</h1>
-          <p className="page-subtitle">{active.length} active · {retired.length} retired</p>
+          <p className="page-subtitle">{active} active · {retired} retired</p>
         </div>
         <Link href="/securities/new" className="btn btn-primary">+ Add Security</Link>
       </div>
 
-      <div className="card">
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Ticker</th>
-                <th>ISIN</th>
-                <th>Currency</th>
-                <th className="table-right">Latest Price</th>
-                <th className="table-right">Change</th>
-                <th>Status</th>
-                <th>Updated</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {!securities?.length ? (
-                <tr>
-                  <td colSpan={9}>
-                    <div className="empty-state">
-                      <div className="empty-state-icon">📈</div>
-                      <div className="empty-state-title">No securities yet</div>
-                      <div className="empty-state-text">Add your first security to start tracking your investments.</div>
-                      <Link href="/securities/new" className="btn btn-primary mt-4">Add Security</Link>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                securities.map(s => {
-                  const latest = (s.security_latest_prices as unknown as { value: number; previous_close: number | null; date: string } | null)
-                  const change = latest?.previous_close
-                    ? ((latest.value - latest.previous_close) / latest.previous_close) * 100
-                    : null
-                  return (
-                    <tr key={s.id}>
-                      <td>
-                        <Link href={`/securities/${s.id}`} style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>
-                          {s.name}
-                        </Link>
-                        {s.note && <div className="text-xs text-muted truncate" style={{ maxWidth: 200 }}>{s.note}</div>}
-                      </td>
-                      <td className="font-mono text-sm">{s.ticker_symbol ?? '—'}</td>
-                      <td className="font-mono text-sm text-muted">{s.isin ?? '—'}</td>
-                      <td><span className="badge badge-blue">{s.currency_code}</span></td>
-                      <td className="table-right font-mono text-sm">
-                        {latest ? formatAmount(latest.value, s.currency_code) : '—'}
-                      </td>
-                      <td className={`table-right text-sm font-mono ${change === null ? '' : change >= 0 ? 'amount-positive' : 'amount-negative'}`}>
-                        {change !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—'}
-                      </td>
-                      <td>
-                        <span className={`badge ${s.is_retired ? 'badge-gray' : 'badge-green'}`}>
-                          {s.is_retired ? 'Retired' : 'Active'}
-                        </span>
-                      </td>
-                      <td className="text-xs text-muted">{formatDate(s.updated_at)}</td>
-                      <td>
-                        <Link href={`/securities/${s.id}`} className="btn btn-icon btn-sm">→</Link>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+      {rows.length === 0 ? (
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon">📈</div>
+            <div className="empty-state-title">No securities yet</div>
+            <div className="empty-state-text">Add your first trade — securities are created automatically.</div>
+            <Link href="/transactions/new" className="btn btn-primary mt-4">Record First Trade</Link>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="card">
+          <SecuritiesGrid rows={rows} />
+        </div>
+      )}
     </>
   )
 }
