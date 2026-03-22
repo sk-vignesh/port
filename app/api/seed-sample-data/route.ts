@@ -103,7 +103,7 @@ export async function POST() {
       const sec = secByTicker[ticker]
       if (!sec) continue
       for (const p of prices) {
-        priceRows.push({ security_id: sec.id, date: p.date, close_price: p.close_price, user_id: user.id })
+        priceRows.push({ security_id: sec.id, date: p.date, value: p.close_price })
       }
     }
     if (priceRows.length > 0) {
