@@ -185,7 +185,7 @@ export default async function DashboardPage() {
                       <tr key={tx.id}>
                         <td className="text-muted text-sm">{formatDate(tx.date)}</td>
                         <td><span className={`badge ${['DEPOSIT','DIVIDENDS','INTEREST','SELL'].includes(tx.type) ? 'badge-green' : tx.type === 'BUY' ? 'badge-purple' : 'badge-red'}`} style={{ fontSize: '0.68rem', padding: '2px 7px' }}>{tx.type}</span></td>
-                        <td className="text-sm text-muted truncate" style={{ maxWidth: 110 }}>{(tx.accounts as { name: string } | null)?.name ?? '—'}</td>
+                        <td className="text-sm text-muted truncate" style={{ maxWidth: 110 }}>{(tx.accounts as unknown as { name: string } | null)?.name ?? '—'}</td>
                         <td className={`table-right font-mono text-sm ${['DEPOSIT','DIVIDENDS','INTEREST','SELL'].includes(tx.type) ? 'amount-positive' : 'amount-negative'}`}>{formatAmount(tx.amount, tx.currency_code)}</td>
                       </tr>
                     ))}
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
                       <tr key={tx.id}>
                         <td className="text-muted text-sm">{formatDate(tx.date)}</td>
                         <td><span className={`badge ${['BUY','DELIVERY_INBOUND'].includes(tx.type) ? 'badge-purple' : 'badge-yellow'}`} style={{ fontSize: '0.68rem', padding: '2px 7px' }}>{tx.type}</span></td>
-                        <td className="text-sm truncate" style={{ maxWidth: 110 }}>{(tx.securities as { name: string } | null)?.name ?? '—'}</td>
+                        <td className="text-sm truncate" style={{ maxWidth: 110 }}>{(tx.securities as unknown as { name: string } | null)?.name ?? '—'}</td>
                         <td className="table-right font-mono text-sm">{formatAmount(tx.amount, tx.currency_code)}</td>
                       </tr>
                     ))}

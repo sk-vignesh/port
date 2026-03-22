@@ -2,7 +2,7 @@
 
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
   BarChart, Bar, ReferenceLine,
   CartesianGrid,
 } from 'recharts'
@@ -58,6 +58,17 @@ function PnLTip({ active, payload, currency }: { active?: boolean; payload?: {va
       <div style={{ color: pos ? GREEN : RED, fontWeight: 700 }}>
         {pos ? '+' : ''}{fmt(gain)} ({pos ? '+' : ''}{(pct * 100).toFixed(2)}%)
       </div>
+    </div>
+  )
+}
+
+// ─── Allocation tooltip ───────────────────────────────────────────────────────
+function AllocTip({ active, payload, fmtCcy }: { active?: boolean; payload?: { name: string; value: number }[]; fmtCcy: (n: number) => string }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={tipStyle}>
+      <div style={{ color: MUTED, marginBottom: 2 }}>{payload[0].name}</div>
+      <strong>{fmtCcy(payload[0].value)}</strong>
     </div>
   )
 }
@@ -151,11 +162,7 @@ export default function DashboardCharts({ priceHistory, allocation, pnl, currenc
                       <Cell key={i} fill={ALLOC_COLORS[i % ALLOC_COLORS.length]} opacity={0.9} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={(v: number) => [fmtCcy(v), 'Cost Basis']}
-                    contentStyle={tipStyle}
-                    itemStyle={{ color: '#f0f4ff' }}
-                  />
+                  <Tooltip content={(p) => <AllocTip active={p.active} payload={p.payload as unknown as { name: string; value: number }[] | undefined} fmtCcy={fmtCcy} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

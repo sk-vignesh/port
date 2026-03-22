@@ -1,0 +1,83 @@
+﻿
+> portfolio-web@0.1.0 build
+> next build
+
+  Ôû▓ Next.js 14.2.29
+  - Environments: .env.local
+  - Experiments (use with caution):
+    ┬À outputFileTracingRoot
+
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo          :  
+   NotSpecified: (Failed to c  
+  ompile.:String) [], Remote   
+ Exception
+    + FullyQualifiedErrorId :  
+   NativeCommandError
+ 
+
+./components/DashboardCharts.ts
+x:155:21
+Type error: Type '(v: number) 
+=> [string, string]' is not 
+assignable to type 
+'Formatter<ValueType, 
+NameType> & ((value: 
+ValueType, name: NameType, 
+item: TooltipPayloadEntry, 
+index: number, payload: 
+TooltipPayload) => ReactNode | 
+[...])'.
+  Type '(v: number) => 
+[string, string]' is not 
+assignable to type 
+'Formatter<ValueType, 
+NameType>'.
+    Types of parameters 'v' 
+and 'value' are incompatible.
+      Type 'ValueType | 
+undefined' is not assignable 
+to type 'number'.
+        Type 'undefined' is 
+not assignable to type 
+'number'.
+
+[0m [90m 153 |[39m          
+         [33m<[39m[33m/[39m
+[33mPie[39m[33m>[39m[0m
+[0m [90m 154 |[39m          
+         [33m<[39m[33mToolti
+p[39m[0m
+[0m[31m[1m>[22m[39m[90m 
+155 |[39m                     
+formatter[33m=[39m{(v[33m:[
+39m number) [33m=>[39m 
+[fmtCcy(v)[33m,[39m 
+[32m'Cost Basis'[39m]}[0m
+[0m [90m     |[39m          
+           
+[31m[1m^[22m[39m[0m
+[0m [90m 156 |[39m          
+           contentStyle[33m=[
+39m{tipStyle}[0m
+[0m [90m 157 |[39m          
+           
+itemStyle[33m=[39m{{ 
+color[33m:[39m 
+[32m'#f0f4ff'[39m }}[0m
+[0m [90m 158 |[39m          
+         
+[33m/[39m[33m>[39m[0m
+Next.js build worker exited 
+with code: 1 and signal: null
