@@ -110,12 +110,41 @@ def main():
     trade_date_str, trade_date_obj, df = get_last_trading_day_bhav()
     price_date = trade_date_obj.isoformat()   # YYYY-MM-DD for Supabase
 
-    # Keep only EQ (equity) series rows and normalise column names
-    df = df[df["SERIES"] == "EQ"].copy()
+    # Normalize column names to UPPER STRIP
     df.columns = [c.strip().upper() for c in df.columns]
 
-    # Build fast lookup: NSE_SYMBOL → row
-    nse_lookup: dict = {}
+    print(f"  Bhav copy columns: {list(df.columns)}")
+    print(f"  Total rows: {len(df)}")
+
+    # Filter to EQ (equity) series only — but only if the SERIES column exists.
+    # Some nselib versions / dates return pre-filtered or differently structured data.
+    if "SERIES" in df.columns:
+        df = df[df["SERIES"] == "EQ"].copy()
+        print(f"  EQ rows: {len(df)}")
+    else:
+        print("  ⚠  No SERIES column found — using all rows as-is")
+        df = df.copy()
+
+    # Possible alternate column names across nselib versions
+    # Map each logical field to candidate column names in priority order
+    COL_CLOSE = ["CLOSE", "CLOSE PRICE", "CLOSEPRICE", "LAST", "LASTPRICE"]
+    COL_PREV  = ["PREVCLOSE", "PREV CLOSE", "PREVIOUSCLOSE", "PREVIOUS CLOSE"]
+
+    def pick_col(df, candidates):
+        for c in candidates:
+            if c in df.columns:
+                return c
+        return None
+
+    col_close = pick_col(df, COL_CLOSE)
+    col_prev  = pick_col(df, COL_PREV)
+
+    if not col_close:
+        print(f"  ERROR: cannot find a close-price column. Available: {list(df.columns)}")
+        sys.exit(1)
+
+    print(f"  Using close col='{col_close}', prev_close col='{col_prev}'")
+
     for _, row in df.iterrows():
         sym = str(row.get("SYMBOL", "")).strip().upper()
         if sym:
@@ -149,12 +178,8 @@ def main():
             continue
 
         # --- Extract prices ---------------------------------------------------
-        # NSE bhav copy column names: SYMBOL SERIES OPEN HIGH LOW CLOSE LAST
-        #                              PREVCLOSE TOTTRDQTY TOTTRDVAL TIMESTAMP
-        #                              TOTALTRADES ISIN
-
-        close_price = to_float(row.get("CLOSE"))
-        prev_close  = to_float(row.get("PREVCLOSE"))
+        close_price = to_float(row.get(col_close))
+        prev_close  = to_float(row.get(col_prev)) if col_prev else None
 
         if close_price is None or close_price <= 0:
             print(f"  ⚠  {nse_sym}: invalid close price ({row.get('CLOSE')}) — skipped")
