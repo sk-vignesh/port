@@ -8,6 +8,7 @@
   --color-bg-primary:     #0a0f1e;
   --color-bg-secondary:   #0d1526;
   --color-bg-card:        #111827;
+  --color-bg-elevated:    #151f32;
   --color-bg-card-hover:  #162035;
   --color-bg-input:       #1a2540;
   --color-border:         #1e2d4a;
@@ -51,12 +52,13 @@
    LIGHT MODE OVERRIDES
    ============================================================ */
 [data-theme="light"] {
-  --color-bg-primary:     #f3f6fc;
+  --color-bg-primary:     #ffffff;
   --color-bg-secondary:   #ffffff;
   --color-bg-card:        #ffffff;
-  --color-bg-card-hover:  #f0f4fc;
-  --color-bg-input:       #f1f4fb;
-  --color-border:         #dce3f0;
+  --color-bg-elevated:    #f8fafc;
+  --color-bg-card-hover:  #f5f8ff;
+  --color-bg-input:       #f1f5fb;
+  --color-border:         #e2e8f0;
   --color-border-focus:   #3b82f6;
   --color-text-primary:   #0f172a;
   --color-text-secondary: #475569;
@@ -72,11 +74,17 @@
   --color-warning-bg:     rgba(217,119,6,0.08);
   --color-purple:         #7c3aed;
   --color-purple-bg:      rgba(124,58,237,0.08);
-  --shadow-card:          0 2px 12px rgba(0,0,0,0.08);
+  --shadow-card:          0 2px 12px rgba(0,0,0,0.06);
   --shadow-glow:          0 0 20px rgba(37,99,235,0.06);
 }
-[data-theme="light"] .table td { border-bottom-color: rgba(220,227,240,0.7); }
+[data-theme="light"] .table td { border-bottom-color: #e8edf5; }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background: #cdd5e0; }
+
+/* Kill 300ms mobile tap delay on all interactive elements */
+a, button, [role="button"], label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* ============================================================
    RESET & BASE

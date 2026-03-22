@@ -15,10 +15,12 @@ interface Portfolio { id: string; name: string }
 // ── Colorful icon wrappers ──────────────────────────────────────────────────
 const IconWrap = ({ color, children }: { color: string; children: React.ReactNode }) => (
   <span style={{
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    width: 28, height: 28, borderRadius: 7, background: `${color}22`, flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 8,
+    background: `${color}22`, flexShrink: 0,
+    color,
   }}>
-    <span style={{ color }}>{children}</span>
+    {children}
   </span>
 )
 
@@ -84,15 +86,17 @@ export default function Sidebar() {
     const active = isActive(href)
     return (
       <Link href={href} style={{
-        display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10,
-        padding: collapsed ? '8px 0' : '7px 10px', borderRadius: 8,
+              display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10,
+        padding: collapsed ? '7px 0' : '7px 10px', borderRadius: 8,
         background: active ? `${color}18` : 'transparent',
         border: active ? `1px solid ${color}30` : '1px solid transparent',
         color: active ? color : 'var(--color-text-secondary)',
         fontWeight: active ? 600 : 500,
         fontSize: '0.82rem', textDecoration: 'none',
-        transition: 'all 0.15s', cursor: 'pointer',
+        transition: 'background 0.1s, color 0.1s, border-color 0.1s',
+        cursor: 'pointer',
         justifyContent: collapsed ? 'center' : 'flex-start',
+        width: '100%',
       }}
       title={collapsed ? label : undefined}>
         <IconWrap color={color}>{icon}</IconWrap>

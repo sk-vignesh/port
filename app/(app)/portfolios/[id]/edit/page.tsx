@@ -12,6 +12,7 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [accounts, setAccounts] = useState<{ id: string; name: string; currency_code: string }[]>([])
   const [form, setForm] = useState({ name: '', note: '', reference_account_id: '', is_retired: false })
@@ -40,6 +41,22 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
     }).eq('id', params.id)
     if (err) { setError(err.message); setSaving(false); return }
     router.push(`/portfolios/${params.id}`)
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this portfolio? This cannot be undone.')) return
+    setDeleting(true)
+    const { error: err } = await supabase.from('portfolios').delete().eq('id', params.id)
+    if (err) {
+      setError(
+        err.message.includes('foreign key') || err.code === '23503'
+          ? 'This portfolio has transactions. Retire it instead of deleting.'
+          : err.message
+      )
+      setDeleting(false)
+      return
+    }
+    router.push('/portfolios')
   }
 
   if (loading) return <div className="page-header"><h1 className="page-title">Loading…</h1></div>
@@ -86,6 +103,22 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
           <Link href={`/portfolios/${params.id}`} className="btn btn-secondary">Cancel</Link>
         </div>
       </form>
+
+      {/* Danger zone */}
+      <div style={{ maxWidth: 520, marginTop: 24, padding: '16px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(239,68,68,0.3)', background: 'var(--color-danger-bg)' }}>
+        <div style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-danger)', marginBottom: 8 }}>Danger Zone</div>
+        <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: 12 }}>
+          Deleting a portfolio is permanent. If it has trades recorded, retire it instead.
+        </div>
+        <button onClick={handleDelete} disabled={deleting} style={{
+          padding: '7px 18px', borderRadius: 'var(--radius-md)',
+          background: 'var(--color-danger)', color: '#fff',
+          border: 'none', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+          opacity: deleting ? 0.6 : 1,
+        }}>
+          {deleting ? 'Deleting…' : 'Delete Portfolio'}
+        </button>
+      </div>
     </>
   )
 }
