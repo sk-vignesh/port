@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import SecuritySearchInput from '@/components/SecuritySearchInput'
 
 const CURRENCIES = ['EUR','USD','GBP','INR','CHF','JPY','CAD','AUD','SEK','NOK','DKK']
 
@@ -14,7 +15,7 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
-    name: '', currency_code: 'EUR', isin: '', ticker_symbol: '', wkn: '', note: '', feed: '', feed_url: '', is_retired: false,
+    name: '', currency_code: 'EUR', isin: '', ticker_symbol: '', wkn: '', note: '', is_retired: false,
   })
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
         if (data) setForm({
           name: data.name, currency_code: data.currency_code, isin: data.isin ?? '',
           ticker_symbol: data.ticker_symbol ?? '', wkn: data.wkn ?? '', note: data.note ?? '',
-          feed: data.feed ?? '', feed_url: data.feed_url ?? '', is_retired: data.is_retired,
+          is_retired: data.is_retired,
         })
         setLoading(false)
       })
@@ -40,7 +41,7 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
       name: form.name.trim(), currency_code: form.currency_code,
       isin: form.isin.trim() || null, ticker_symbol: form.ticker_symbol.trim() || null,
       wkn: form.wkn.trim() || null, note: form.note.trim() || null,
-      feed: form.feed.trim() || null, feed_url: form.feed_url.trim() || null,
+      feed: form.ticker_symbol.trim() ? 'YAHOO' : null,
       is_retired: form.is_retired,
     }).eq('id', params.id)
     if (err) { setError(err.message); setSaving(false); return }
@@ -101,21 +102,16 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
           </div>
         </div>
         <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header"><span className="card-title">Price Feed</span></div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div className="form-group">
-                <label className="form-label">Feed Provider</label>
-                <input type="text" className="form-input" placeholder="YAHOO" value={form.feed} onChange={set('feed')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Feed URL</label>
-                <input type="url" className="form-input" value={form.feed_url} onChange={set('feed_url')} />
-              </div>
-            </div>
-            <div className="text-xs text-muted">
-              For Indian stocks use ticker like <code>RELIANCE.NS</code> (NSE) or <code>RELIANCE.BO</code> (BSE). Prices are fetched daily via Yahoo Finance.
-            </div>
+          <div className="card-header">
+            <span className="card-title">Update from Yahoo Finance</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>search to update ticker &amp; currency</span>
+          </div>
+          <div className="card-body">
+            <SecuritySearchInput
+              onSelect={r => setForm(f => ({ ...f, ticker_symbol: r.symbol, currency_code: r.currency }))}
+              placeholder="Search to change ticker / currency…"
+            />
+            <div className="text-xs text-muted mt-2">Current ticker: <code>{form.ticker_symbol || '(none)'}</code> · {form.currency_code}</div>
           </div>
         </div>
         {error && <div style={{ padding: '10px 14px', background: 'var(--color-danger-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger)', marginBottom: 16, fontSize: '0.875rem' }}>{error}</div>}

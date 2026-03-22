@@ -4,39 +4,41 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'INR', 'CHF', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK']
+import SecuritySearchInput from '@/components/SecuritySearchInput'
 
 export default function NewSecurityPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [searchDone, setSearchDone] = useState(false)
 
   const [form, setForm] = useState({
-    name: '',
-    currency_code: 'EUR',
-    isin: '',
-    ticker_symbol: '',
-    wkn: '',
-    note: '',
-    feed: '',
-    feed_url: '',
+    name: '', currency_code: '', isin: '', ticker_symbol: '', wkn: '', note: '',
   })
 
-  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }))
+
+  const handleSelect = (result: { symbol: string; name: string; currency: string; exchange: string }) => {
+    setSearchDone(true)
+    setForm(f => ({
+      ...f,
+      name: result.name,
+      ticker_symbol: result.symbol,
+      currency_code: result.currency,
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) { setError('Name is required'); return }
-    setLoading(true)
-    setError(null)
-
+    if (!form.currency_code) { setError('Currency is required — select a security from the search results'); return }
+    setLoading(true); setError(null)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth/login'); return }
 
-    const payload = {
+    const { data, error: err } = await supabase.from('securities').insert({
       user_id: user.id,
       name: form.name.trim(),
       currency_code: form.currency_code,
@@ -44,12 +46,10 @@ export default function NewSecurityPage() {
       ticker_symbol: form.ticker_symbol.trim() || null,
       wkn: form.wkn.trim() || null,
       note: form.note.trim() || null,
-      feed: form.feed.trim() || null,
-      feed_url: form.feed_url.trim() || null,
-    }
+      feed: form.ticker_symbol ? 'YAHOO' : null,
+    }).select('id').single()
 
-    const { data, error } = await supabase.from('securities').insert(payload).select('id').single()
-    if (error) { setError(error.message); setLoading(false); return }
+    if (err) { setError(err.message); setLoading(false); return }
     router.push(`/securities/${data.id}`)
   }
 
@@ -61,82 +61,77 @@ export default function NewSecurityPage() {
           {' / '}New
         </div>
         <h1 className="page-title">Add Security</h1>
-        <p className="page-subtitle">Stocks, ETFs, cryptocurrency, bonds, or other assets</p>
+        <p className="page-subtitle">Search for a stock, ETF, or fund — or add manually</p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ maxWidth: 720 }}>
+      <form onSubmit={handleSubmit} style={{ maxWidth: 640 }}>
+        {/* Step 1 — Search */}
         <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header"><span className="card-title">Basic Information</span></div>
+          <div className="card-header">
+            <span className="card-title">Search Yahoo Finance</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>auto-fills ticker &amp; currency</span>
+          </div>
           <div className="card-body">
-            <div className="form-group">
-              <label className="form-label" htmlFor="sec-name">Name *</label>
-              <input id="sec-name" type="text" className="form-input" placeholder="Apple Inc." value={form.name} onChange={set('name')} required />
-            </div>
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label" htmlFor="sec-currency">Currency *</label>
-                <select id="sec-currency" className="form-input form-select" value={form.currency_code} onChange={set('currency_code')}>
-                  {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="sec-ticker">Ticker Symbol</label>
-                <input id="sec-ticker" type="text" className="form-input font-mono" placeholder="AAPL" value={form.ticker_symbol} onChange={set('ticker_symbol')} />
-              </div>
-            </div>
-            <div className="form-row form-row-2">
-              <div className="form-group">
-                <label className="form-label" htmlFor="sec-isin">ISIN</label>
-                <input id="sec-isin" type="text" className="form-input font-mono" placeholder="US0378331005" value={form.isin} onChange={set('isin')} />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="sec-wkn">WKN</label>
-                <input id="sec-wkn" type="text" className="form-input font-mono" placeholder="865985" value={form.wkn} onChange={set('wkn')} />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="sec-note">Notes</label>
-              <textarea id="sec-note" className="form-input" placeholder="Optional description…" rows={3} value={form.note} onChange={set('note')} />
+            <SecuritySearchInput onSelect={handleSelect} />
+            <div className="text-xs text-muted mt-2">
+              Supports global markets: US (AAPL), UK (BARC.L), India (RELIANCE.NS), EU, JP and more
             </div>
           </div>
         </div>
 
+        {/* Step 2 — Details (shown after search or for manual entry) */}
         <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header"><span className="card-title">Price Feed (Optional)</span></div>
-          <div className="card-body">
-            <div className="form-row form-row-2">
+          <div className="card-header">
+            <span className="card-title">Details</span>
+            {!searchDone && <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>auto-filled from search ↑ or enter manually</span>}
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-group">
+              <label className="form-label">Name *</label>
+              <input type="text" className="form-input" placeholder="Apple Inc." value={form.name} onChange={set('name')} required />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
-                <label className="form-label" htmlFor="sec-feed">Feed Provider</label>
-                <input id="sec-feed" type="text" className="form-input" placeholder="e.g. YAHOO" value={form.feed} onChange={set('feed')} />
+                <label className="form-label">Ticker Symbol</label>
+                <input type="text" className="form-input font-mono" placeholder="AAPL / RELIANCE.NS" value={form.ticker_symbol} onChange={set('ticker_symbol')} />
+                <div className="text-xs text-muted mt-1">Used for daily price fetch</div>
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="sec-feed-url">Feed URL</label>
-                <input id="sec-feed-url" type="url" className="form-input" placeholder="https://…" value={form.feed_url} onChange={set('feed_url')} />
+                <label className="form-label">Currency *</label>
+                <input type="text" className="form-input font-mono" placeholder="EUR / USD / INR"
+                  value={form.currency_code}
+                  onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase().slice(0, 3) }))}
+                  maxLength={3} required />
               </div>
             </div>
-            <div className="text-xs text-muted">
-              Price feeds are for reference — historical prices can be imported or entered manually.
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-group">
+                <label className="form-label">ISIN <span className="text-muted">(optional)</span></label>
+                <input type="text" className="form-input font-mono" placeholder="US0378331005" value={form.isin} onChange={set('isin')} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">WKN <span className="text-muted">(optional)</span></label>
+                <input type="text" className="form-input font-mono" placeholder="865985" value={form.wkn} onChange={set('wkn')} />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Notes <span className="text-muted">(optional)</span></label>
+              <textarea className="form-input" rows={2} placeholder="Any additional notes…" value={form.note} onChange={set('note')} />
             </div>
           </div>
         </div>
 
         {error && (
-          <div style={{
-            padding: '12px 16px',
-            background: 'var(--color-danger-bg)',
-            border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--color-danger)',
-            marginBottom: 16,
-          }}>
+          <div style={{ padding: '10px 14px', background: 'var(--color-danger-bg)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger)', marginBottom: 16, fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
 
         <div className="flex flex-gap-3">
-          <button id="save-security-btn" type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Saving…' : 'Add Security'}
-          </button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Saving…' : 'Add Security'}</button>
           <Link href="/securities" className="btn btn-secondary">Cancel</Link>
         </div>
       </form>
