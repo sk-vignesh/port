@@ -28,7 +28,7 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
   const [form, setForm] = useState({
     type: 'BUY',
     shares: '',
-    amount: '',
+    price: '',       // price per share — user inputs this
     date: new Date().toISOString().slice(0, 10),
     note: '',
   })
@@ -36,10 +36,14 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(v => ({ ...v, [k]: e.target.value }))
 
-  // Called when user picks a stock from search
+  // Derived — calculated from price × shares
+  const totalAmount = form.shares && form.price && +form.shares > 0 && +form.price > 0
+    ? +form.shares * +form.price
+    : null
+
+  // Called when user picks a stock from search — find or auto-create in DB
   const handleSelectStock = async (stock: IndianStock) => {
     setError(null)
-    // Find or auto-create the security in DB
     const { data: existing } = await supabase
       .from('securities').select('id, name, ticker_symbol, currency_code')
       .eq('ticker_symbol', stock.symbol).maybeSingle()
@@ -59,17 +63,19 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selected) { setError('Search and select a stock first'); return }
-    if (!form.shares || +form.shares <= 0) { setError('Enter a valid number of shares'); return }
-    if (!form.amount || +form.amount <= 0) { setError('Enter a valid amount'); return }
+    if (!selected)                              { setError('Search and select a stock first'); return }
+    if (!form.shares || +form.shares <= 0)      { setError('Enter a valid number of shares'); return }
+    if (!form.price  || +form.price  <= 0)      { setError('Enter a valid price per share'); return }
     setLoading(true); setError(null)
+
+    const amount = Math.round(+form.shares * +form.price * 100) // stored in paise
 
     const { error: err } = await supabase.from('portfolio_transactions').insert({
       portfolio_id: params.id,
       type: form.type as never,
       security_id: selected.id,
       shares: Math.round(+form.shares * 100_000_000),
-      amount: Math.round(+form.amount * 100),
+      amount,
       currency_code: selected.currency,
       date: form.date,
       note: form.note || null,
@@ -78,6 +84,9 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
     if (err) { setError(err.message); setLoading(false); return }
     router.push(`/portfolios/${params.id}`)
   }
+
+  const formatINR = (v: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
 
   return (
     <>
@@ -120,13 +129,13 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
           )}
         </div>
 
-        {/* Step 2 — Trade details (only shown after stock selected) */}
+        {/* Step 2 — Trade details */}
         {selected && (
           <div className="card" style={{ marginBottom: 20 }}>
             <div className="card-header"><span className="card-title">Trade Details</span></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-              {/* Type as pill buttons */}
+              {/* Type pills */}
               <div className="form-group">
                 <label className="form-label">Type</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
@@ -149,17 +158,29 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group">
                   <label className="form-label">Shares *</label>
-                  <input type="number" className="form-input" step="0.000001" min="0" placeholder="10" value={form.shares} onChange={set('shares')} required />
+                  <input type="number" className="form-input" step="0.000001" min="0"
+                    placeholder="10" value={form.shares} onChange={set('shares')} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Total Amount * ({selected.currency})</label>
-                  <input type="number" className="form-input" step="0.01" min="0" placeholder="15000.00" value={form.amount} onChange={set('amount')} required />
+                  <label className="form-label">Price per Share * ({selected.currency})</label>
+                  <input type="number" className="form-input" step="0.01" min="0"
+                    placeholder="1500.00" value={form.price} onChange={set('price')} required />
                 </div>
               </div>
 
-              {form.shares && form.amount && +form.shares > 0 && +form.amount > 0 && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: -8, padding: '6px 10px', background: 'var(--color-bg-input)', borderRadius: 'var(--radius-sm)' }}>
-                  Price per share: <strong>{(+form.amount / +form.shares).toFixed(2)} {selected.currency}</strong>
+              {/* Calculated total — read only */}
+              {totalAmount !== null && (
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-input)', border: '1px solid var(--color-border)',
+                }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                    Total ({form.shares} × {(+form.price).toLocaleString('en-IN')})
+                  </span>
+                  <span style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-text-primary)' }}>
+                    {formatINR(totalAmount)}
+                  </span>
                 </div>
               )}
 
