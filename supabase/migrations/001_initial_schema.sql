@@ -339,10 +339,11 @@ CREATE POLICY "Users can CRUD own classification assignments" ON classification_
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO user_settings (user_id) VALUES (new.id);
+  INSERT INTO public.user_settings (user_id) VALUES (new.id)
+  ON CONFLICT (user_id) DO NOTHING;
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
