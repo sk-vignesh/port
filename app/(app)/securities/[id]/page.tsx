@@ -131,7 +131,7 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
           { label: 'Today',          value: change     !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`     : '—', cls: change     !== null ? (change >= 0 ? 'amount-positive' : 'amount-negative') : '' },
           { label: '1 Week',         value: change7d   !== null ? `${change7d >= 0 ? '+' : ''}${change7d.toFixed(2)}%`   : '—', cls: change7d   !== null ? (change7d >= 0 ? 'amount-positive' : 'amount-negative') : '' },
           { label: '1 Month',        value: change30d  !== null ? `${change30d >= 0 ? '+' : ''}${change30d.toFixed(2)}%`  : '—', cls: change30d  !== null ? (change30d >= 0 ? 'amount-positive' : 'amount-negative') : '' },
-          { label: 'Net Holding',    value: netShares > 0 ? `${netShares.toFixed(4)} shares` : '—' },
+          { label: 'Net Holding',    value: netShares > 0 ? `${Math.round(netShares)} shares` : '—' },
           { label: 'Current Value',  value: currentValue !== null ? formatAmount(currentValue, security.currency_code) : '—' },
           { label: 'Avg Buy Price',  value: avgBuyPrice !== null ? formatAmount(avgBuyPrice, security.currency_code) : '—' },
           { label: 'Unrealised P&L', value: unrealisedPl !== null ? formatAmount(unrealisedPl, security.currency_code) : '—', cls: unrealisedPl !== null ? (unrealisedPl >= 0 ? 'amount-positive' : 'amount-negative') : '' },

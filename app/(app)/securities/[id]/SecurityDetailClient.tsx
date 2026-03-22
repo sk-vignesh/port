@@ -42,7 +42,7 @@ const txCols: ColDef[] = [
       return `<span style="padding:2px 8px;border-radius:4px;background:${colors[p.value] ?? '#64748b'}22;color:${colors[p.value] ?? '#94a3b8'};font-weight:600;font-size:0.78rem">${p.value.replace(/_/g,' ')}</span>`
     } },
   { field: 'shares', headerName: 'Shares', width: 100, type: 'numericColumn',
-    valueFormatter: p => p.value?.toFixed(4) ?? '' },
+    valueFormatter: p => p.value != null ? String(Math.round(p.value)) : '' },
   { field: 'price', headerName: 'Price (₹)', width: 110, type: 'numericColumn',
     valueFormatter: p => p.value != null ? new Intl.NumberFormat('en-IN',{maximumFractionDigits:2}).format(p.value) : '' },
   { field: 'amount', headerName: 'Amount (₹)', width: 130, type: 'numericColumn',

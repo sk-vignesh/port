@@ -89,7 +89,7 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
                       {PORTFOLIO_TX_LABELS[tx.type] ?? tx.type}
                     </span></td>
                     <td className="text-sm">{(tx.securities as unknown as { name: string } | null)?.name ?? '—'}</td>
-                    <td className="table-right font-mono text-sm">{shares > 0 ? shares.toFixed(4) : '—'}</td>
+                    <td className="table-right font-mono text-sm">{shares > 0 ? Math.round(shares) : '—'}</td>
                     <td className={`table-right font-mono text-sm ${isBuy ? 'amount-negative' : 'amount-positive'}`}>
                       {formatAmount(tx.amount, tx.currency_code)}
                     </td>

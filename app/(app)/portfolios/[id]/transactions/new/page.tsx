@@ -167,12 +167,12 @@ export default function NewPortfolioTransactionPage({ params }: { params: { id: 
           {/* ── Quantity & Price ── */}
           <div className="card">
             <div style={{ padding: '18px 20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', marginBottom: 8 }}>
-                    Shares / Units *
+                    Shares *
                   </label>
-                  <input type="number" className="form-input" step="0.000001" min="0"
+                  <input type="number" className="form-input" step="1" min="1"
                     placeholder="0" value={shares} onChange={e => setShares(e.target.value)}
                     style={{ fontSize: '1.1rem', fontWeight: 600, textAlign: 'right' }} required />
                 </div>

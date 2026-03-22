@@ -2,43 +2,48 @@
 
 import { useRef, useCallback } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridReadyEvent, SelectionChangedEvent, GridApi } from 'ag-grid-community'
-import { AllCommunityModule, ModuleRegistry, themeQuartz } from 'ag-grid-community'
+import type { ColDef, GridApi } from 'ag-grid-community'
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
+
+// Import AG Grid base CSS (required for class-based theming)
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-quartz.css'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-// Dark-mode theme matching the app's palette
-const appTheme = themeQuartz.withParams({
-  backgroundColor:        '#0f172a',
-  foregroundColor:        '#e2e8f0',
-  borderColor:            '#1e293b',
-  chromeBackgroundColor:  '#151f32',
-  rowHoverColor:          '#1e2d4a',
-  selectedRowBackgroundColor: '#1e3a5f',
-  headerBackgroundColor:  '#151f32',
-  oddRowBackgroundColor:  '#0f172a',
-  inputFocusBorder:       '1px solid #3b82f6',
-  fontFamily:             'Inter, system-ui, sans-serif',
-  fontSize:               13,
-})
+// CSS custom properties override for dark mode — applied inline on the container
+const DARK_VARS: React.CSSProperties = {
+  '--ag-background-color':          '#0f172a',
+  '--ag-foreground-color':          '#e2e8f0',
+  '--ag-border-color':              '#1e293b',
+  '--ag-header-background-color':   '#151f32',
+  '--ag-header-foreground-color':   '#94a3b8',
+  '--ag-row-hover-color':           '#1e2d4a',
+  '--ag-selected-row-background-color': '#1e3a5f',
+  '--ag-odd-row-background-color':  '#0a1628',
+  '--ag-row-border-color':          '#1e293b',
+  '--ag-input-focus-border-color':  '#3b82f6',
+  '--ag-font-family':               'Inter, system-ui, sans-serif',
+  '--ag-font-size':                 '13px',
+  '--ag-cell-horizontal-padding':   '12px',
+} as React.CSSProperties
 
-export interface AppGridProps<T = Record<string, unknown>> {
-  rowData: T[]
+export interface AppGridProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rowData: any[]
   columnDefs: ColDef[]
   exportFilename?: string
   height?: number | string
-  quickFilter?: boolean
 }
 
-export default function AppGrid<T = Record<string, unknown>>({
+export default function AppGrid({
   rowData,
   columnDefs,
   exportFilename = 'export',
   height = 460,
-  quickFilter = true,
-}: AppGridProps<T>) {
-  const gridRef = useRef<AgGridReact<T>>(null)
+}: AppGridProps) {
+  const gridRef = useRef<AgGridReact>(null)
 
   const defaultColDef: ColDef = {
     sortable: true,
@@ -50,22 +55,16 @@ export default function AppGrid<T = Record<string, unknown>>({
   const selectionColDef: ColDef = {
     checkboxSelection: true,
     headerCheckboxSelection: true,
-    width: 44,
-    minWidth: 44,
-    maxWidth: 44,
-    pinned: 'left',
-    resizable: false,
-    sortable: false,
-    filter: false,
+    width: 44, minWidth: 44, maxWidth: 44,
+    pinned: 'left', resizable: false, sortable: false, filter: false,
   }
 
   const exportToExcel = useCallback(() => {
     const api = gridRef.current?.api
     if (!api) return
-    const selectedRows = api.getSelectedRows()
-    const dataToExport: T[] = selectedRows.length > 0 ? selectedRows : rowData
-
-    const ws = XLSX.utils.json_to_sheet(dataToExport as Record<string, unknown>[])
+    const selected = api.getSelectedRows()
+    const data = selected.length > 0 ? selected : rowData
+    const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Data')
     XLSX.writeFile(wb, `${exportFilename}_${new Date().toISOString().slice(0, 10)}.xlsx`)
@@ -83,31 +82,30 @@ export default function AppGrid<T = Record<string, unknown>>({
           {rowData.length} row{rowData.length !== 1 ? 's' : ''}
         </span>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={exportToExcel}
-          style={{
-            padding: '5px 14px', borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-input)', color: 'var(--color-text-secondary)',
-            cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 5,
-          }}
-        >
+        <button onClick={exportToExcel} style={{
+          padding: '5px 14px', borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-input)', color: 'var(--color-text-secondary)',
+          cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
           ⬇ Export Excel
         </button>
       </div>
 
-      {/* Grid */}
-      <div style={{ height, width: '100%' }}>
-        <AgGridReact<T>
+      {/* Grid — dark theme via CSS custom properties on container */}
+      <div
+        className="ag-theme-quartz"
+        style={{ height, width: '100%', ...DARK_VARS }}
+      >
+        <AgGridReact
           ref={gridRef}
           rowData={rowData}
           columnDefs={[selectionColDef, ...columnDefs]}
           defaultColDef={defaultColDef}
-          theme={appTheme}
           rowSelection="multiple"
-          suppressRowClickSelection={true}
-          animateRows={true}
+          suppressRowClickSelection
+          animateRows
           onFilterChanged={onFilterChanged as never}
           domLayout="normal"
         />
