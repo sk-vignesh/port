@@ -5,55 +5,9 @@ import { AgGridReact } from 'ag-grid-react'
 import type { ColDef, GridApi } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
-
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
+import { appGridTheme } from '@/lib/agGridTheme'
 
 ModuleRegistry.registerModules([AllCommunityModule])
-
-// Fine-tune the dark quartz base theme to match the app's design system
-const GRID_VARS: React.CSSProperties = {
-  // Backgrounds — pulled from app tokens
-  '--ag-background-color':               'var(--color-bg-card)',
-  '--ag-odd-row-background-color':       'var(--color-bg-card)',
-  '--ag-header-background-color':        'var(--color-bg-elevated)',
-  '--ag-row-hover-color':                '#1e3a5f',
-  '--ag-selected-row-background-color':  '#1e3a5f',
-  '--ag-modal-overlay-background-color': 'rgba(0,0,0,0.5)',
-
-  // Text
-  '--ag-foreground-color':        'var(--color-text-primary)',
-  '--ag-header-foreground-color': 'var(--color-text-muted)',
-  '--ag-secondary-foreground-color': 'var(--color-text-muted)',
-
-  // Borders — subtle
-  '--ag-border-color':            'var(--color-border)',
-  '--ag-row-border-color':        'var(--color-border)',
-  '--ag-cell-horizontal-border':  'none',
-
-  // Inputs / focus
-  '--ag-input-focus-border-color': 'var(--color-accent-light)',
-  '--ag-input-border-color':       'var(--color-border)',
-
-  // Typography — hardcoded Montserrat bypasses CSS var resolution issues
-  '--ag-font-family':   'Montserrat, sans-serif',
-  '--ag-font-size':     '13px',
-  '--ag-font-weight-normal': '400',
-
-  // Layout
-  '--ag-cell-horizontal-padding': '16px',
-  '--ag-header-height':           '42px',
-  '--ag-row-height':               '44px',
-  '--ag-list-item-height':         '36px',
-
-  // Hide column separators for a cleaner look
-  '--ag-header-column-separator-display':       'none',
-  '--ag-header-column-resize-handle-display':   'none',
-
-  // Range selection
-  '--ag-range-selection-border-color':          'var(--color-accent)',
-  '--ag-range-selection-background-color':      'rgba(59,130,246,0.08)',
-} as React.CSSProperties
 
 export interface AppGridProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,7 +56,6 @@ export default function AppGrid({
 
   return (
     <div>
-      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 2px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
           {rowData.length} {rowData.length !== 1 ? 'records' : 'record'}
@@ -120,13 +73,10 @@ export default function AppGrid({
         </button>
       </div>
 
-      {/* ag-theme-quartz-dark = proper dark base; GRID_VARS refine colors to match app */}
-      <div
-        className="ag-theme-quartz-dark"
-        style={{ height, width: '100%', borderRadius: 8, overflow: 'hidden', ...GRID_VARS }}
-      >
+      <div style={{ height, width: '100%', borderRadius: 8, overflow: 'hidden' }}>
         <AgGridReact
           ref={gridRef}
+          theme={appGridTheme}
           rowData={rowData}
           columnDefs={[selectionColDef, ...columnDefs]}
           defaultColDef={defaultColDef}

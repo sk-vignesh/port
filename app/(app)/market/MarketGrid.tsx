@@ -2,12 +2,10 @@
 
 import { useRef, useCallback, useMemo } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridApi, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community'
+import type { ColDef, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
-
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-quartz.css'
+import { appGridTheme } from '@/lib/agGridTheme'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
@@ -24,42 +22,14 @@ export interface MarketRow {
   pct:         number | null
 }
 
-const GRID_VARS: React.CSSProperties = {
-  '--ag-background-color':               'var(--color-bg-card)',
-  '--ag-odd-row-background-color':       'var(--color-bg-card)',
-  '--ag-header-background-color':        'var(--color-bg-elevated)',
-  '--ag-row-hover-color':                '#1e3a5f',
-  '--ag-selected-row-background-color':  '#1e3a5f',
-  '--ag-foreground-color':               'var(--color-text-primary)',
-  '--ag-header-foreground-color':        'var(--color-text-muted)',
-  '--ag-secondary-foreground-color':     'var(--color-text-muted)',
-  '--ag-border-color':                   'var(--color-border)',
-  '--ag-row-border-color':               'var(--color-border)',
-  '--ag-cell-horizontal-border':         'none',
-  '--ag-input-focus-border-color':       'var(--color-accent-light)',
-  '--ag-input-border-color':             'var(--color-border)',
-  '--ag-font-family':                    'Montserrat, sans-serif',
-  '--ag-font-size':                      '13px',
-  '--ag-cell-horizontal-padding':        '16px',
-  '--ag-header-height':                  '42px',
-  '--ag-row-height':                     '44px',
-  '--ag-header-column-separator-display':'none',
-  '--ag-header-column-resize-handle-display': 'none',
-  '--ag-range-selection-border-color':   'var(--color-accent)',
-} as React.CSSProperties
-
 const fmtINR = (v: number | null | undefined) =>
   v != null
     ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(v)
     : '—'
 
-const fmtVol = (v: number | null | undefined) =>
-  v != null ? v.toLocaleString('en-IN') : '—'
-
-/** Colour cell by sign */
 function ChangeCellRenderer({ value }: ICellRendererParams) {
   if (value == null || value === '—') return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-  const num = typeof value === 'string' ? parseFloat(value) : value
+  const num = typeof value === 'string' ? parseFloat(value) : (value as number)
   const color = num > 0 ? 'var(--color-success)' : num < 0 ? 'var(--color-danger)' : 'var(--color-text-secondary)'
   return <span style={{ color, fontWeight: 600 }}>{value}</span>
 }
@@ -80,70 +50,53 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
       cellStyle: { fontWeight: 700, color: 'var(--color-accent-light)', letterSpacing: '0.04em' },
     },
     {
-      field: 'prev_close',
-      headerName: 'Prev Close',
+      field: 'prev_close', headerName: 'Prev Close', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-text-muted)' },
-      type: 'numericColumn',
     },
     {
-      field: 'open_price',
-      headerName: 'Open',
+      field: 'open_price', headerName: 'Open', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-text-muted)' },
-      type: 'numericColumn',
     },
     {
-      field: 'high_price',
-      headerName: 'High',
+      field: 'high_price', headerName: 'High', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-success)', fontWeight: 500 },
-      type: 'numericColumn',
     },
     {
-      field: 'low_price',
-      headerName: 'Low',
+      field: 'low_price', headerName: 'Low', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-danger)', fontWeight: 500 },
-      type: 'numericColumn',
     },
     {
-      field: 'close_price',
-      headerName: 'Close',
+      field: 'close_price', headerName: 'Close', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { fontWeight: 700 },
-      type: 'numericColumn',
     },
     {
-      field: 'chg',
-      headerName: 'Change',
+      field: 'chg', headerName: 'Change', type: 'numericColumn',
       valueFormatter: (p: ValueFormatterParams) =>
         p.value != null ? (p.value >= 0 ? '+' : '') + fmtINR(p.value) : '—',
       cellRenderer: ChangeCellRenderer,
-      type: 'numericColumn',
     },
     {
-      field: 'pct',
-      headerName: '% Change',
-      sort: 'desc' as const,
+      field: 'pct', headerName: '% Change', type: 'numericColumn',
+      sort: 'desc',
       comparator: (a: number, b: number) => Math.abs(b) - Math.abs(a),
       valueFormatter: (p: ValueFormatterParams) =>
-        p.value != null ? `${p.value >= 0 ? '+' : ''}${p.value.toFixed(2)}%` : '—',
+        p.value != null ? `${p.value >= 0 ? '+' : ''}${(p.value as number).toFixed(2)}%` : '—',
       cellRenderer: ChangeCellRenderer,
-      type: 'numericColumn',
     },
     {
-      field: 'volume',
-      headerName: 'Volume',
-      valueFormatter: (p: ValueFormatterParams) => fmtVol(p.value),
+      field: 'volume', headerName: 'Volume', type: 'numericColumn',
+      valueFormatter: (p: ValueFormatterParams) =>
+        p.value != null ? (p.value as number).toLocaleString('en-IN') : '—',
       cellStyle: { color: 'var(--color-text-muted)' },
-      type: 'numericColumn',
     },
     {
-      field: 'isin',
-      headerName: 'ISIN',
-      width: 140,
-      cellStyle: { color: 'var(--color-text-muted)', fontFamily: 'monospace', fontSize: '11px' },
+      field: 'isin', headerName: 'ISIN', width: 140,
+      cellStyle: { color: 'var(--color-text-muted)', fontSize: '11px' },
     },
   ], [])
 
@@ -167,7 +120,6 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
 
   return (
     <div>
-      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px 8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
           {rows.length.toLocaleString('en-IN')} securities
@@ -185,12 +137,10 @@ export default function MarketGrid({ rows }: { rows: MarketRow[] }) {
         </button>
       </div>
 
-      <div
-        className="ag-theme-quartz-dark"
-        style={{ height: 620, width: '100%', borderRadius: 8, overflow: 'hidden', ...GRID_VARS }}
-      >
+      <div style={{ height: 640, width: '100%', borderRadius: 8, overflow: 'hidden' }}>
         <AgGridReact
           ref={gridRef}
+          theme={appGridTheme}
           rowData={rows}
           columnDefs={[selectionColDef, ...colDefs]}
           defaultColDef={defaultColDef}

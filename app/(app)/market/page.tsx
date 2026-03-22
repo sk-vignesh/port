@@ -26,6 +26,7 @@ export default async function MarketPage() {
         .from('nse_market_data')
         .select('symbol, close_price, prev_close, open_price, high_price, low_price, volume, isin')
         .eq('date', latestDate)
+        .limit(5000)
     : { data: [] }
 
   const fmtDate = (d: string) =>
