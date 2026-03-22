@@ -139,6 +139,8 @@ def main():
         print(f"  ERROR: TCKRSYMB not found. Columns: {list(df.columns)}")
         sys.exit(1)
 
+    # Build fast lookup: NSE_SYMBOL → row
+    nse_lookup: dict = {}
     for _, row in df.iterrows():
         sym = str(row.get(COL_SYMBOL, "")).strip().upper()
         if sym:
