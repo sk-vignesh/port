@@ -22,14 +22,21 @@ export default function SecuritiesGrid({ rows }: Props) {
   const colDefs: ColDef<SecurityRow>[] = [
     {
       field: 'name', headerName: 'Name', flex: 2, minWidth: 160,
-      cellRenderer: (p: { value: string; data: SecurityRow }) =>
-        `<a style="color:var(--color-accent-light);font-weight:600;text-decoration:none;cursor:pointer" data-id="${p.data.id}">${p.value}</a>`,
+      // Return JSX — AG Grid v33+ React handles this correctly
+      cellRenderer: (p: { value: string; data: SecurityRow }) => (
+        <a
+          style={{ color: 'var(--color-accent-light)', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+          onClick={() => router.push(`/securities/${p.data.id}`)}
+        >
+          {p.value}
+        </a>
+      ),
     },
-    { field: 'ticker',   headerName: 'Ticker',   width: 100, cellStyle: { fontFamily: 'monospace' } },
-    { field: 'isin',     headerName: 'ISIN',      width: 140, cellStyle: { fontFamily: 'monospace', color: '#94a3b8' } },
-    { field: 'currency', headerName: 'Currency',  width: 90 },
+    { field: 'ticker', headerName: 'Ticker', width: 100, cellStyle: { fontFamily: 'monospace' } },
+    { field: 'isin', headerName: 'ISIN', width: 140, cellStyle: { fontFamily: 'monospace', color: '#94a3b8' } },
+    { field: 'currency', headerName: 'Currency', width: 90 },
     {
-      field: 'price', headerName: 'Price (₹)', width: 120, type: 'numericColumn',
+      field: 'price', headerName: 'Price (₹)', width: 130, type: 'numericColumn',
       valueFormatter: p => fmtINR(p.value),
     },
     {
@@ -40,21 +47,22 @@ export default function SecuritiesGrid({ rows }: Props) {
     },
     {
       field: 'status', headerName: 'Status', width: 90,
-      cellRenderer: (p: { value: string }) =>
-        `<span style="padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:${p.value === 'Active' ? '#22c55e22' : '#64748b22'};color:${p.value === 'Active' ? '#22c55e' : '#94a3b8'}">${p.value}</span>`,
+      cellRenderer: (p: { value: string }) => (
+        <span style={{
+          padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600,
+          background: p.value === 'Active' ? '#22c55e22' : '#64748b22',
+          color: p.value === 'Active' ? '#22c55e' : '#94a3b8',
+        }}>
+          {p.value}
+        </span>
+      ),
     },
     { field: 'priceDate', headerName: 'Price Date', width: 110, cellStyle: { color: '#64748b' } },
-    { field: 'updated',   headerName: 'Updated',    width: 110, cellStyle: { color: '#64748b' } },
+    { field: 'updated', headerName: 'Updated', width: 110, cellStyle: { color: '#64748b' } },
   ]
 
   return (
-    <div
-      style={{ padding: '0 4px 12px' }}
-      onClick={e => {
-        const el = (e.target as HTMLElement).closest('a[data-id]') as HTMLAnchorElement | null
-        if (el) { e.preventDefault(); router.push(`/securities/${el.dataset.id}`) }
-      }}
-    >
+    <div style={{ padding: '0 4px 12px' }}>
       <AppGrid
         rowData={rows}
         columnDefs={colDefs}

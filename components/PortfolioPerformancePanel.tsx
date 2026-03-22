@@ -67,7 +67,21 @@ export default function PortfolioPerformancePanel({ portfolioId, currency }: { p
     </div>
   )
 
-  if (error || !data) return null
+  if (error) return (
+    <div className="card mb-6">
+      <div className="card-body" style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: '20px 24px' }}>
+        ⚠️ Could not load performance data — {error}
+      </div>
+    </div>
+  )
+
+  if (!data || (data.investedCapital === 0 && data.currentValue === 0)) return (
+    <div className="card mb-6">
+      <div className="card-body" style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', padding: '20px 24px', textAlign: 'center' }}>
+        Add your first trade to see performance metrics.
+      </div>
+    </div>
+  )
 
   const noPrices = data.currentValue === 0 && data.investedCapital > 0
 

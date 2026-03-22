@@ -36,10 +36,15 @@ const fmtPrice = (v: number, cur: string) =>
 const txCols: ColDef[] = [
   { field: 'date',      headerName: 'Date',       width: 110 },
   { field: 'portfolio', headerName: 'Portfolio',   width: 120 },
-  { field: 'type',      headerName: 'Type',        width: 110,
+  { field: 'type', headerName: 'Type', width: 120,
     cellRenderer: (p: { value: string }) => {
       const colors: Record<string, string> = { BUY: '#22c55e', SELL: '#ef4444', DELIVERY_INBOUND: '#3b82f6', DELIVERY_OUTBOUND: '#f59e0b', TRANSFER_IN: '#8b5cf6', TRANSFER_OUT: '#64748b' }
-      return `<span style="padding:2px 8px;border-radius:4px;background:${colors[p.value] ?? '#64748b'}22;color:${colors[p.value] ?? '#94a3b8'};font-weight:600;font-size:0.78rem">${p.value.replace(/_/g,' ')}</span>`
+      const c = colors[p.value] ?? '#64748b'
+      return (
+        <span style={{ padding: '2px 8px', borderRadius: 4, background: `${c}22`, color: c, fontWeight: 600, fontSize: '0.78rem' }}>
+          {p.value.replace(/_/g, ' ')}
+        </span>
+      )
     } },
   { field: 'shares', headerName: 'Shares', width: 100, type: 'numericColumn',
     valueFormatter: p => p.value != null ? String(Math.round(p.value)) : '' },
