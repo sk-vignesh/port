@@ -10,6 +10,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [email, setEmail] = useState<string | null>(null)
+  const [seeding, setSeeding] = useState(false)
+  const [seedMsg, setSeedMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -29,6 +31,36 @@ export default function SettingsPage() {
     setMsg(error ? { type: 'error', text: error.message } : { type: 'success', text: 'Settings saved!' })
     setSaving(false)
   }
+
+  const loadSampleData = async () => {
+    if (!confirm('This will add sample securities, accounts, portfolios, and transactions to your account. Continue?')) return
+    setSeeding(true)
+    setSeedMsg(null)
+    try {
+      const res = await fetch('/api/seed-sample-data', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to load sample data')
+      setSeedMsg({
+        type: 'success',
+        text: `✓ Sample data loaded! Added ${json.inserted.securities} securities, ${json.inserted.accounts} accounts, ${json.inserted.portfolios} portfolios, and transactions. Navigate to Securities or Portfolios to explore.`,
+      })
+    } catch (err: unknown) {
+      setSeedMsg({ type: 'error', text: err instanceof Error ? err.message : 'Unknown error' })
+    } finally {
+      setSeeding(false)
+    }
+  }
+
+  const alertStyle = (type: 'success' | 'error') => ({
+    padding: '10px 14px',
+    background: type === 'success' ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+    border: `1px solid ${type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+    borderRadius: 'var(--radius-md)',
+    color: type === 'success' ? 'var(--color-success)' : 'var(--color-danger)',
+    fontSize: '0.875rem',
+    marginBottom: 16,
+    lineHeight: 1.6,
+  })
 
   return (
     <>
@@ -68,29 +100,37 @@ export default function SettingsPage() {
                 Used for aggregated portfolio value calculations and cross-currency conversion.
               </div>
             </div>
-
-            {msg && (
-              <div style={{
-                padding: '10px 14px',
-                background: msg.type === 'success' ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                border: `1px solid ${msg.type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                borderRadius: 'var(--radius-md)',
-                color: msg.type === 'success' ? 'var(--color-success)' : 'var(--color-danger)',
-                fontSize: '0.875rem',
-                marginBottom: 16,
-              }}>
-                {msg.text}
-              </div>
-            )}
-
-            <button
-              id="save-settings-btn"
-              className="btn btn-primary"
-              onClick={saveCurrency}
-              disabled={saving}
-            >
+            {msg && <div style={alertStyle(msg.type)}>{msg.text}</div>}
+            <button id="save-settings-btn" className="btn btn-primary" onClick={saveCurrency} disabled={saving}>
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Sample Data */}
+      <div className="card mt-4" style={{ maxWidth: 800 }}>
+        <div className="card-header"><span className="card-title">🧪 Sample Data</span></div>
+        <div className="card-body">
+          <p className="text-sm text-muted" style={{ lineHeight: 1.7, marginBottom: 16 }}>
+            New here? Load a realistic sample dataset to explore the app — includes{' '}
+            <strong style={{ color: 'var(--color-text-primary)' }}>Apple (AAPL)</strong>,{' '}
+            <strong style={{ color: 'var(--color-text-primary)' }}>BASF (BAS)</strong>, and a{' '}
+            <strong style={{ color: 'var(--color-text-primary)' }}>Vanguard ETF (VWRL)</strong>{' '}
+            with price history, EUR &amp; USD cash accounts, two portfolios, and buy/sell/dividend
+            transactions spanning 2022–2023. Based on the original Portfolio Performance open-source test data.
+          </p>
+          {seedMsg && <div style={alertStyle(seedMsg.type)}>{seedMsg.text}</div>}
+          <button
+            id="load-sample-data-btn"
+            className="btn btn-secondary"
+            onClick={loadSampleData}
+            disabled={seeding}
+          >
+            {seeding ? '⏳ Loading sample data…' : '⬇ Load Sample Data'}
+          </button>
+          <div className="text-xs text-muted mt-2">
+            Running this more than once will create duplicate entries.
           </div>
         </div>
       </div>
@@ -106,7 +146,7 @@ export default function SettingsPage() {
               style={{ color: 'var(--color-accent-light)' }}>
               Portfolio Performance
             </a>{' '}
-            desktop application. Track stocks, ETFs, cryptocurrencies and other assets with full transaction history,
+            desktop application. Track stocks, ETFs, and other assets with full transaction history,
             performance metrics, and taxonomy-based allocation analysis.
           </p>
           <div className="flex flex-gap-3 mt-4">
