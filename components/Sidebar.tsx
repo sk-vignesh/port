@@ -43,10 +43,11 @@ const navItems = [
   {
     label: 'Analysis',
     items: [
-      { href: '/market',     label: 'Market',     icon: <Activity size={15} />,   color: '#10b981' },
-      { href: '/reports',    label: 'Reports',    icon: <BarChart3 size={15} />,  color: '#f97316' },
-      { href: '/watchlists', label: 'Watchlists', icon: <Star size={15} />,       color: '#ec4899' },
-      { href: '/taxonomies', label: 'Segments',   icon: <Layers size={15} />,     color: '#6366f1' },
+      { href: '/gains',      label: 'Gains & P&L',  icon: <TrendingUp size={15} />,  color: '#f59e0b' },
+      { href: '/market',     label: 'Market',        icon: <Activity size={15} />,    color: '#10b981' },
+      { href: '/reports',    label: 'Reports',       icon: <BarChart3 size={15} />,   color: '#f97316' },
+      { href: '/watchlists', label: 'Watchlists',    icon: <Star size={15} />,        color: '#ec4899' },
+      { href: '/taxonomies', label: 'Segments',      icon: <Layers size={15} />,      color: '#6366f1' },
     ],
   },
 ]
