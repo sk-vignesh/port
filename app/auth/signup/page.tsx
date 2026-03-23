@@ -56,8 +56,8 @@ export default function SignupPage() {
         <div className="auth-logo">
           <div className="auth-logo-icon">📈</div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Portfolio Performance</div>
-            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.78rem' }}>Investment Tracker</div>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Apna Stocks</div>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.78rem' }}>Your Portfolio Tracker</div>
           </div>
         </div>
         <h1 className="auth-title">Create account</h1>
