@@ -1,18 +1,18 @@
 name: Groww Portfolio Sync
 
 on:
-  # Daily at 09:00 IST (03:30 UTC) — well after NSE open, picks up previous day's trades
+  # Daily at 09:00 IST (03:30 UTC) — credentials come from Supabase, not GitHub Secrets
   schedule:
     - cron: '30 3 * * *'
 
-  # Trigger manually from the Actions tab (useful for first-time import / debugging)
+  # Manual trigger from the Actions tab
   workflow_dispatch:
 
 jobs:
   sync-groww:
-    name: Sync Groww holdings & trades → Supabase
+    name: Sync Groww → Supabase (all users)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repo
@@ -28,10 +28,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Sync Groww → Supabase
+      - name: Sync all users' Groww portfolios
         env:
-          GROWW_API_KEY:            ${{ secrets.GROWW_API_KEY }}
-          GROWW_API_SECRET:         ${{ secrets.GROWW_API_SECRET }}
-          SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
+          # No Groww credentials here — the script reads them from Supabase per-user
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/sync_groww.py
