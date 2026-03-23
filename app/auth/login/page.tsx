@@ -33,7 +33,15 @@ export default function LoginPage() {
     <div className="auth-wrapper">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="auth-logo-icon">📈</div>
+          <div className="auth-logo-icon">
+            <svg width="48" height="48" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+              <rect width="400" height="400" rx="72" fill="#244c89"/>
+              <rect x="42"  y="272" width="65" height="90"  rx="10" fill="white"/>
+              <rect x="125" y="212" width="65" height="150" rx="10" fill="white"/>
+              <rect x="208" y="155" width="65" height="207" rx="10" fill="white"/>
+              <rect x="291" y="92"  width="65" height="270" rx="10" fill="white"/>
+            </svg>
+          </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>Apna Stocks</div>
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.78rem' }}>Your Portfolio Tracker</div>

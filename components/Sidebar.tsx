@@ -53,16 +53,14 @@ const navItems = [
 
 function LogoMark({ size = 32 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="lg1" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8" fill="url(#lg1)" />
-      <polyline points="6,22 12,14 18,18 26,8" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <circle cx="26" cy="8" r="2.5" fill="white" />
+    <svg width={size} height={size} viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      {/* Background */}
+      <rect width="400" height="400" rx="72" fill="#244c89"/>
+      {/* 4 ascending bars — Apna Stocks logo */}
+      <rect x="42"  y="272" width="65" height="90"  rx="10" fill="white"/>
+      <rect x="125" y="212" width="65" height="150" rx="10" fill="white"/>
+      <rect x="208" y="155" width="65" height="207" rx="10" fill="white"/>
+      <rect x="291" y="92"  width="65" height="270" rx="10" fill="white"/>
     </svg>
   )
 }
