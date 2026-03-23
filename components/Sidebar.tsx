@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, CalendarClock,
   BarChart3, Star, Layers, PanelLeftClose, PanelLeftOpen,
-  ChevronDown, ChevronRight, TrendingUp, Settings, Activity,
+  ChevronDown, ChevronRight, TrendingUp, Settings, Activity, Upload,
 } from 'lucide-react'
 
 interface Portfolio { id: string; name: string }
@@ -37,6 +37,7 @@ const navItems = [
     items: [
       { href: '/transactions', label: 'Transactions', icon: <ArrowLeftRight size={15} />, color: '#a855f7' },
       { href: '/plans',        label: 'Plans',         icon: <CalendarClock size={15} />,  color: '#f59e0b' },
+      { href: '/import',       label: 'Import',        icon: <Upload size={15} />,         color: '#22c55e' },
     ],
   },
   {
