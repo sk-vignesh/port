@@ -42,22 +42,29 @@ function detectType(raw: string): 'buy' | 'sell' {
   return 'buy'
 }
 
-function detectBroker(headers: string[]): 'groww' | 'zerodha' | 'unknown' {
-  if (headers.some(h => h.includes('security_name') || h.includes('scrip_name'))) return 'groww'
+function detectBroker(headers: string[]): 'groww' | 'zerodha' | 'angelone' | 'upstox' | 'unknown' {
   if (headers.some(h => h.includes('order_execution_time'))) return 'zerodha'
+  if (headers.some(h => h.includes('security_name') || h.includes('scrip_name'))) return 'groww'
+  if (headers.some(h => h.includes('scrip_symbol') || h.includes('net_qty') || h.includes('net_rate'))) return 'angelone'
+  if (headers.some(h => h.includes('instrument_key') || h.includes('segment') || (h.includes('side') && headers.includes('segment')))) return 'upstox'
   return 'unknown'
 }
 
-// Unified column aliases for Zerodha + Groww
+// Unified column aliases — Zerodha, Groww, Angel One, Upstox
 const ALIASES: Record<string, string[]> = {
-  symbol:   ['symbol', 'trading_symbol', 'scrip', 'security_name', 'scrip_name', 'instrument'],
-  isin:     ['isin'],
-  date:     ['trade_date', 'order_execution_time', 'date', 'trade_date_time', 'time', 'timestamp'],
-  type:     ['trade_type', 'transaction_type', 'buy_sell', 'type', 'order_type', 'buysell'],
-  qty:      ['quantity', 'qty', 'units', 'trade_quantity'],
-  price:    ['price', 'trade_price', 'average_price', 'avg_price', 'trade_rate'],
-  trade_id: ['trade_id', 'order_id', 'trade_no', 'tradeid', 'reference_number'],
-  exchange: ['exchange', 'market'],
+  symbol:   ['symbol', 'trading_symbol', 'scrip', 'security_name', 'scrip_name', 'instrument',
+             'scrip_symbol', 'stock_symbol', 'tradingsymbol', 'script_name'],
+  isin:     ['isin', 'isin_code'],
+  date:     ['trade_date', 'order_execution_time', 'date', 'trade_date_time', 'time', 'timestamp',
+             'order_date', 'transaction_date', 'trade_time'],
+  type:     ['trade_type', 'transaction_type', 'buy_sell', 'type', 'order_type', 'buysell',
+             'side', 'trade_side', 'action', 'b_s', 'buy___sell'],
+  qty:      ['quantity', 'qty', 'units', 'trade_quantity', 'net_qty', 'filled_quantity', 'executed_quantity'],
+  price:    ['price', 'trade_price', 'average_price', 'avg_price', 'trade_rate',
+             'net_rate', 'avg__price', 'executed_price', 'fill_price'],
+  trade_id: ['trade_id', 'order_id', 'trade_no', 'tradeid', 'reference_number',
+             'order_no', 'orderid', 'trade_number'],
+  exchange: ['exchange', 'market', 'exch', 'exchange_segment'],
 }
 
 function findCol(headers: string[], key: string): number {
@@ -182,9 +189,11 @@ const COLS = [
 ]
 
 const BROKER_BADGE: Record<string, { label: string; color: string }> = {
-  zerodha: { label: '🟣 Zerodha detected', color: '#7c3aed' },
-  groww:   { label: '🟢 Groww detected',   color: '#16a34a' },
-  unknown: { label: '🔵 Unknown format',    color: 'var(--color-text-muted)' },
+  zerodha:  { label: '🟣 Zerodha detected',  color: '#7c3aed' },
+  groww:    { label: '🟢 Groww detected',    color: '#16a34a' },
+  angelone: { label: '🟠 Angel One detected',color: '#ea580c' },
+  upstox:   { label: '🔵 Upstox detected',   color: '#2563eb' },
+  unknown:  { label: '⚪ Unknown format',     color: 'var(--color-text-muted)' },
 }
 
 interface Portfolio { id: string; name: string }
@@ -236,7 +245,7 @@ export default function ImportPage() {
     <>
       <div className="page-header">
         <h1 className="page-title">Import Trades</h1>
-        <p className="page-subtitle">Upload a Trade Book from Zerodha or Groww to import your transactions</p>
+        <p className="page-subtitle">Upload a Trade Book from Zerodha, Groww, Angel One or Upstox to import your transactions</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -256,9 +265,21 @@ export default function ImportPage() {
                   },
                   {
                     broker: '🟢 Groww',
-                    steps: 'App or website → Profile → Reports → Equity → Download XLSX',
+                    steps: 'groww.in → Profile → Reports → Equity → Download XLSX',
                     href: 'https://groww.in/reports',
                     format: 'XLSX / CSV',
+                  },
+                  {
+                    broker: '🟠 Angel One',
+                    steps: 'angelone.in → Reports → Transactional Reports → Trade Book → Download Excel',
+                    href: 'https://www.angelone.in/trade/orders/tradebook',
+                    format: 'XLSX / CSV',
+                  },
+                  {
+                    broker: '🔵 Upstox',
+                    steps: 'upstox.com → Reports → Trade History → Select FY → Download CSV',
+                    href: 'https://account.upstox.com/reports',
+                    format: 'CSV / XLSX',
                   },
                 ].map(b => (
                   <div key={b.broker} style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.82rem', lineHeight: 1.8 }}>
