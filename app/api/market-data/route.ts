@@ -4,40 +4,51 @@ export const dynamic = 'force-dynamic'
 
 // Columns the client is allowed to sort by (must match DB column names)
 const SORTABLE = new Set(['symbol', 'close_price', 'prev_close', 'open_price', 'high_price', 'low_price', 'volume'])
+const SELECT = 'symbol, name, close_price, prev_close, open_price, high_price, low_price, volume'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
 
-  const date     = searchParams.get('date') ?? ''
-  const start    = parseInt(searchParams.get('start') ?? '0', 10)
-  const end      = parseInt(searchParams.get('end')   ?? '99', 10)
-  const search   = searchParams.get('search') ?? ''
-  const sortCol  = searchParams.get('sortCol') ?? 'symbol'
-  const sortDir  = searchParams.get('sortDir') === 'desc' ? false : true  // ascending = true
+  const date    = searchParams.get('date') ?? ''
+  const start   = parseInt(searchParams.get('start') ?? '0', 10)
+  const end     = parseInt(searchParams.get('end')   ?? '99', 10)
+  const search  = searchParams.get('search') ?? ''
+  const sortCol = searchParams.get('sortCol') ?? ''
+  const sortDir = searchParams.get('sortDir') === 'desc' ? false : true
 
   if (!date) return NextResponse.json({ error: 'date required' }, { status: 400 })
 
   const supabase = await createClient()
 
-  let query = supabase
-    .from('nse_market_data')
-    .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
-    .eq('date', date)
-    .range(start, end)
+  const buildQuery = (useIndexPriority: boolean) => {
+    let q = supabase
+      .from('nse_market_data')
+      .select(SELECT, { count: 'exact' })
+      .eq('date', date)
+      .range(start, end)
 
-  // Default ordering: Nifty50 first (priority 1), then Bank Nifty (2), Nifty IT (3), then all others
-  const hasExplicitSort = SORTABLE.has(sortCol)
-  if (hasExplicitSort) {
-    query = query.order(sortCol, { ascending: sortDir })
-  } else {
-    query = query.order('index_priority', { ascending: true, nullsFirst: false }).order('symbol', { ascending: true })
+    if (SORTABLE.has(sortCol)) {
+      q = q.order(sortCol, { ascending: sortDir })
+    } else if (useIndexPriority) {
+      q = q.order('index_priority', { ascending: true, nullsFirst: false }).order('symbol', { ascending: true })
+    } else {
+      q = q.order('symbol', { ascending: true })
+    }
+
+    if (search.trim()) {
+      q = q.ilike('symbol', `%${search.trim()}%`)
+    }
+    return q
   }
 
-  if (search.trim()) {
-    query = query.ilike('symbol', `%${search.trim()}%`)
+  let { data, count, error } = await buildQuery(true)
+
+  // Schema cache fallback — if index_priority not yet known, retry without it
+  if (error?.message?.includes('index_priority')) {
+    const r2 = await buildQuery(false)
+    data = r2.data; count = r2.count; error = r2.error
   }
 
-  const { data, count, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ rows: data ?? [], total: count ?? 0 })

@@ -21,22 +21,36 @@ export default async function MarketPage() {
 
   const latestDate = dateRow?.date ?? null
 
-  // First 500 rows + total count — ordered by index priority then symbol
-  const { data: rows, count } = latestDate
+  const BASE_SELECT = 'symbol, name, close_price, prev_close, open_price, high_price, low_price, volume'
+
+  // Try Nifty-priority ordering; fall back to symbol if column not in schema cache yet
+  let result = latestDate
     ? await supabase
         .from('nse_market_data')
-        .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+        .select(BASE_SELECT, { count: 'exact' })
         .eq('date', latestDate)
         .order('index_priority', { ascending: true, nullsFirst: false })
         .order('symbol', { ascending: true })
         .range(0, 499)
-    : { data: [], count: 0 }
+    : { data: [] as never[], count: 0, error: null }
+
+  if (result.error) {
+    // Schema cache hasn't refreshed yet for index_priority — fall back gracefully
+    result = latestDate
+      ? await supabase
+          .from('nse_market_data')
+          .select(BASE_SELECT, { count: 'exact' })
+          .eq('date', latestDate)
+          .order('symbol', { ascending: true })
+          .range(0, 499)
+      : { data: [] as never[], count: 0, error: null }
+  }
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
 
-  const initialRows = (rows ?? []) as MarketRow[]
-  const initialTotal = count ?? 0
+  const initialRows = (result.data ?? []) as MarketRow[]
+  const initialTotal = result.count ?? 0
 
   return (
     <>
