@@ -210,18 +210,56 @@ const COLS = [
 ]
 
 const BROKER_BADGE: Record<string, { label: string; color: string }> = {
-  zerodha:  { label: '🟣 Zerodha',   color: '#7c3aed' },
-  groww:    { label: '🟢 Groww',     color: '#16a34a' },
-  angelone: { label: '🟠 Angel One', color: '#ea580c' },
-  upstox:   { label: '🔵 Upstox',    color: '#2563eb' },
-  icici:    { label: '🟡 ICICI Direct', color: '#ca8a04' },
-  hdfc:     { label: '🟤 HDFC Sec',  color: '#dc2626' },
-  kotak:    { label: '⚪ Kotak Neo',  color: '#6b7280' },
-  sbicap:   { label: '🟣 SBICap',   color: '#4f46e5' },
-  dhan:     { label: '🟢 Dhan',      color: '#059669' },
-  '5paisa': { label: '🔵 5paisa',    color: '#0284c7' },
-  unknown:  { label: '⚪ Unknown',    color: 'var(--color-text-muted)' },
+  zerodha:  { label: 'Zerodha',    color: '#7c3aed' },
+  groww:    { label: 'Groww',      color: '#16a34a' },
+  angelone: { label: 'Angel One',  color: '#ea580c' },
+  upstox:   { label: 'Upstox',    color: '#2563eb' },
+  icici:    { label: 'ICICI Direct', color: '#ca8a04' },
+  hdfc:     { label: 'HDFC Sec',  color: '#dc2626' },
+  kotak:    { label: 'Kotak Neo', color: '#6b7280' },
+  sbicap:   { label: 'SBICap',    color: '#4f46e5' },
+  dhan:     { label: 'Dhan',      color: '#059669' },
+  '5paisa': { label: '5paisa',    color: '#0284c7' },
+  unknown:  { label: 'Unknown',   color: 'var(--color-text-muted)' },
 }
+
+// Single source of truth for broker export instructions
+interface BrokerGuide {
+  id: string; name: string; format: string; color: string
+  steps: string[]; href: string
+}
+const BROKER_GUIDES: BrokerGuide[] = [
+  { id: 'zerodha',  name: 'Zerodha',     format: 'CSV',      color: '#7c3aed',
+    href: 'https://console.zerodha.com/reports/tradebook',
+    steps: ['Go to console.zerodha.com', 'Click Reports → Trade Book', 'Select the date range (full financial year)', 'Click Download CSV'] },
+  { id: 'groww',    name: 'Groww',       format: 'XLSX/CSV', color: '#16a34a',
+    href: 'https://groww.in/reports',
+    steps: ['Open groww.in and sign in', 'Go to Profile → Reports → Equity', 'Select the financial year', 'Click Download — choose XLSX or CSV'] },
+  { id: 'angelone', name: 'Angel One',   format: 'XLSX/CSV', color: '#ea580c',
+    href: 'https://www.angelone.in/trade/orders/tradebook',
+    steps: ['Login to angelone.in', 'Go to Reports → Transactional Reports', 'Select Trade Book and the date range', 'Click the Excel/Download icon'] },
+  { id: 'upstox',   name: 'Upstox',     format: 'CSV/XLSX', color: '#2563eb',
+    href: 'https://account.upstox.com/reports',
+    steps: ['Login to account.upstox.com', 'Go to Reports → Trade History', 'Select Financial Year from the dropdown', 'Click Download CSV or Excel'] },
+  { id: 'icici',    name: 'ICICI Direct', format: 'XLSX/CSV', color: '#ca8a04',
+    href: 'https://www.icicidirect.com',
+    steps: ['Login to icicidirect.com', 'Go to Portfolio → Equity → Trade Book', 'Select the financial year / date range', 'Click Download (Excel or CSV)'] },
+  { id: 'hdfc',     name: 'HDFC Sec',   format: 'XLSX',     color: '#dc2626',
+    href: 'https://www.hdfcsec.com',
+    steps: ['Login to hdfcsec.com', 'Go to My Account → Trade Details', 'Set the date range and segment (Equity)', 'Click Export to Excel'] },
+  { id: 'kotak',    name: 'Kotak Neo',  format: 'CSV',      color: '#6b7280',
+    href: 'https://www.kotaksecurities.com',
+    steps: ['Login to Kotak Neo (neo.kotak.com)', 'Open the Orders tab', 'Switch to Trades / Trade History', 'Click Download CSV'] },
+  { id: 'sbicap',   name: 'SBICap Sec', format: 'XLSX/CSV', color: '#4f46e5',
+    href: 'https://www.sbicapsec.com',
+    steps: ['Login to sbicapsec.com', 'Go to Reports → Trade Book', 'Select date range and Equity segment', 'Click Export / Download'] },
+  { id: 'dhan',     name: 'Dhan',       format: 'CSV',      color: '#059669',
+    href: 'https://dhan.co',
+    steps: ['Login to dhan.co', 'Go to Reports → Trade History', 'Select the financial year', 'Click Download CSV'] },
+  { id: '5paisa',   name: '5paisa',     format: 'CSV',      color: '#0284c7',
+    href: 'https://www.5paisa.com',
+    steps: ['Login to 5paisa.com', 'Go to My Account → Reports → Trade Book', 'Choose date range and Equity', 'Click Download'] },
+]
 
 interface Portfolio { id: string; name: string }
 
@@ -235,6 +273,7 @@ export default function ImportPage() {
   const [importing,   setImporting]   = useState(false)
   const [result,      setResult]      = useState<{imported:number;skipped:number;new_securities:number;errors:string[]}|null>(null)
   const [dragging,    setDragging]    = useState(false)
+  const [selectedGuideId, setSelectedGuideId] = useState<string>('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -281,27 +320,49 @@ export default function ImportPage() {
         {!trades.length && !result && (
           <div className="card">
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Instructions */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {[
-                  { broker: '🟣 Zerodha',     steps: 'console.zerodha.com → Reports → Trade Book → Download CSV',                          href: 'https://console.zerodha.com/reports/tradebook',        format: 'CSV' },
-                  { broker: '🟢 Groww',       steps: 'groww.in → Profile → Reports → Equity → Download XLSX',                              href: 'https://groww.in/reports',                             format: 'XLSX/CSV' },
-                  { broker: '🟠 Angel One',   steps: 'angelone.in → Reports → Transactional Reports → Trade Book → Download',              href: 'https://www.angelone.in/trade/orders/tradebook',        format: 'XLSX/CSV' },
-                  { broker: '🔵 Upstox',      steps: 'account.upstox.com → Reports → Trade History → FY → Download',                      href: 'https://account.upstox.com/reports',                   format: 'CSV/XLSX' },
-                  { broker: '🟡 ICICI Direct',steps: 'icicidirect.com → Portfolio → Equity → Trade Book → Download',                       href: 'https://www.icicidirect.com',                          format: 'XLSX/CSV' },
-                  { broker: '🔴 HDFC Sec',    steps: 'hdfcsec.com → My Account → Trade Details → Export to Excel',                         href: 'https://www.hdfcsec.com',                              format: 'XLSX' },
-                  { broker: '⚪ Kotak Neo',   steps: 'kotak.com/neo → Orders tab → Download CSV',                                          href: 'https://www.kotaksecurities.com',                      format: 'CSV' },
-                  { broker: '🔵 SBICap',      steps: 'sbicapsec.com → Reports → Trade Book → Export',                                      href: 'https://www.sbicapsec.com',                            format: 'XLSX/CSV' },
-                  { broker: '🟢 Dhan',        steps: 'dhan.co → Reports → Trade History → Download CSV',                                   href: 'https://dhan.co',                                      format: 'CSV' },
-                  { broker: '🔵 5paisa',      steps: '5paisa.com → My Account → Reports → Trade Book → Download',                          href: 'https://www.5paisa.com',                               format: 'CSV' },
-                ].map(b => (
-                  <div key={b.broker} style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '10px 12px', fontSize: '0.79rem', lineHeight: 1.7 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 2 }}>{b.broker} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.72rem' }}>({b.format})</span></div>
-                    <a href={b.href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-light)' }}>
-                      {b.steps}
-                    </a>
-                  </div>
-                ))}
+              {/* Broker selector dropdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>Your broker</label>
+                  <select
+                    className="form-input"
+                    value={selectedGuideId}
+                    onChange={e => setSelectedGuideId(e.target.value)}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">— Select to see export steps —</option>
+                    {BROKER_GUIDES.map(g => (
+                      <option key={g.id} value={g.id}>{g.name} ({g.format})</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Dynamic instruction panel */}
+                {selectedGuideId && (() => {
+                  const guide = BROKER_GUIDES.find(g => g.id === selectedGuideId)!
+                  return (
+                    <div style={{
+                      background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)',
+                      padding: '14px 16px', borderLeft: `3px solid ${guide.color}`,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.88rem', color: guide.color }}>{guide.name}</span>
+                        <a href={guide.href} target="_blank" rel="noopener noreferrer"
+                           style={{ fontSize: '0.75rem', color: 'var(--color-accent-light)' }}>
+                          Open {guide.name} ↗
+                        </a>
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {guide.steps.map((step, i) => (
+                          <li key={i} style={{ fontSize: '0.82rem', color: 'var(--color-text)', lineHeight: 1.5 }}>{step}</li>
+                        ))}
+                      </ol>
+                      <div style={{ marginTop: 10, fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                        File format: <strong>{guide.format}</strong>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Drop zone */}
