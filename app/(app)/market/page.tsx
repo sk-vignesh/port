@@ -11,7 +11,7 @@ export default async function MarketPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // Latest trading date
+  // Latest trading date — uses only stable columns, no schema-cache risk
   const { data: dateRow } = await supabase
     .from('nse_market_data')
     .select('date')
@@ -21,52 +21,76 @@ export default async function MarketPage() {
 
   const latestDate = dateRow?.date ?? null
 
-  const BASE_SELECT = 'symbol, name, close_price, prev_close, open_price, high_price, low_price, volume'
-
-  // Try Nifty-priority ordering; fall back to symbol if column not in schema cache yet
-  let result = latestDate
-    ? await supabase
-        .from('nse_market_data')
-        .select(BASE_SELECT, { count: 'exact' })
-        .eq('date', latestDate)
-        .order('index_priority', { ascending: true, nullsFirst: false })
-        .order('symbol', { ascending: true })
-        .range(0, 499)
-    : { data: [] as never[], count: 0, error: null }
-
-  if (result.error) {
-    // Schema cache hasn't refreshed yet for index_priority — fall back gracefully
-    result = latestDate
-      ? await supabase
-          .from('nse_market_data')
-          .select(BASE_SELECT, { count: 'exact' })
-          .eq('date', latestDate)
-          .order('symbol', { ascending: true })
-          .range(0, 499)
-      : { data: [] as never[], count: 0, error: null }
+  if (!latestDate) {
+    return (
+      <>
+        <div className="page-header">
+          <h1 className="page-title">Market</h1>
+          <p className="page-subtitle">NSE EQ segment</p>
+        </div>
+        <div className="card">
+          <div className="empty-state">
+            <div className="empty-state-icon">📡</div>
+            <div className="empty-state-title">No price data yet</div>
+            <div className="empty-state-text">
+              Trigger the <strong>NSE EOD Price Fetch</strong> workflow in GitHub Actions to load market data.
+            </div>
+          </div>
+        </div>
+      </>
+    )
   }
+
+  // Progressive fallback — strip new columns if PostgREST schema cache is stale
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any[] | null = null
+  let count: number | null = null
+  let errMsg: string | null = null
+
+  const attempts = [
+    // 1. Full columns + Nifty priority ordering (ideal)
+    () => supabase.from('nse_market_data')
+      .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+      .eq('date', latestDate).order('index_priority', { ascending: true, nullsFirst: false }).order('symbol', { ascending: true }).range(0, 499),
+    // 2. Full columns + symbol ordering (index_priority not cached)
+    () => supabase.from('nse_market_data')
+      .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+      .eq('date', latestDate).order('symbol', { ascending: true }).range(0, 499),
+    // 3. Core columns only + symbol ordering (name also not cached)
+    () => supabase.from('nse_market_data')
+      .select('symbol, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+      .eq('date', latestDate).order('symbol', { ascending: true }).range(0, 499),
+  ]
+
+  for (const attempt of attempts) {
+    const res = await attempt()
+    if (!res.error) { data = res.data; count = res.count; break }
+    errMsg = res.error.message
+  }
+
+  const initialRows = (data ?? []) as MarketRow[]
+  const initialTotal = count ?? 0
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
-
-  const initialRows = (result.data ?? []) as MarketRow[]
-  const initialTotal = result.count ?? 0
 
   return (
     <>
       <div className="page-header">
         <h1 className="page-title">Market</h1>
-        <p className="page-subtitle">
-          NSE EQ segment{latestDate ? ` · ${fmtDate(latestDate)}` : ''}
-        </p>
+        <p className="page-subtitle">NSE EQ segment · {fmtDate(latestDate)}</p>
       </div>
 
-      {!latestDate || initialRows.length === 0 ? (
+      {initialRows.length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <div className="empty-state-icon">📡</div>
-            <div className="empty-state-title">No price data yet</div>
-            <div className="empty-state-text">End-of-day prices will appear here once they are available.</div>
+            <div className="empty-state-title">No records for {fmtDate(latestDate)}</div>
+            <div className="empty-state-text">
+              {errMsg
+                ? `Query error: ${errMsg}`
+                : 'Re-run the NSE EOD Price Fetch workflow to reload market data.'}
+            </div>
           </div>
         </div>
       ) : (
