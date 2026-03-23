@@ -119,8 +119,12 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '18px 0' : '18px 16px',
-        borderBottom: '1px solid var(--color-border)', justifyContent: collapsed ? 'center' : 'flex-start',
+        display: 'flex', alignItems: 'center', gap: 10,
+        height: 56,
+        padding: collapsed ? '0' : '0 16px',
+        borderBottom: '1px solid var(--color-border)',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        flexShrink: 0,
       }}>
         <LogoMark size={30} />
         {!collapsed && (

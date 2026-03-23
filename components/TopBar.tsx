@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTheme } from './ThemeProvider'
 import Link from 'next/link'
+import { Sun, Moon, Monitor } from 'lucide-react'
 
 const THEME_OPTIONS = [
-  { value: 'light',  label: 'Light',  icon: '☀️' },
-  { value: 'dark',   label: 'Dark',   icon: '🌙' },
-  { value: 'system', label: 'System', icon: '💻' },
+  { value: 'light',  label: 'Light',  icon: <Sun  size={14} strokeWidth={2} /> },
+  { value: 'dark',   label: 'Dark',   icon: <Moon size={14} strokeWidth={2} /> },
+  { value: 'system', label: 'System', icon: <Monitor size={14} strokeWidth={2} /> },
 ] as const
 
 export default function TopBar({ email }: { email: string | null }) {
