@@ -131,7 +131,7 @@ export default function Sidebar() {
         {!collapsed && (
           <div>
             <div style={{ fontWeight: 800, fontSize: '0.9rem', letterSpacing: '-0.01em', color: 'var(--color-text-primary)' }}>Apna Stocks</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>अपना Portfolio</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Apna Portfolio</div>
           </div>
         )}
       </div>

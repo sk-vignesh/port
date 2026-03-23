@@ -12,7 +12,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: 'Apna Stocks',
-  description: 'Apna Stocks — track and analyse your Indian stock portfolio. अपना portfolio, अपना control.',
+  description: 'Apna Stocks — track and analyse your Indian stock portfolio. Your portfolio, your control.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
