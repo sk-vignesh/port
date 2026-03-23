@@ -1,5 +1,6 @@
-# NSE Price Fetcher + Groww Sync — Python dependencies
+# NSE Price Fetcher + Groww + Zerodha Sync — Python dependencies
 nselib==2.4.3
 supabase>=2.3.0
 growwapi
 pyotp
+kiteconnect
