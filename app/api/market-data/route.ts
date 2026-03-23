@@ -24,7 +24,14 @@ export async function GET(req: Request) {
     .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
     .eq('date', date)
     .range(start, end)
-    .order(SORTABLE.has(sortCol) ? sortCol : 'symbol', { ascending: sortDir })
+
+  // Default ordering: Nifty50 first (priority 1), then Bank Nifty (2), Nifty IT (3), then all others
+  const hasExplicitSort = SORTABLE.has(sortCol)
+  if (hasExplicitSort) {
+    query = query.order(sortCol, { ascending: sortDir })
+  } else {
+    query = query.order('index_priority', { ascending: true, nullsFirst: false }).order('symbol', { ascending: true })
+  }
 
   if (search.trim()) {
     query = query.ilike('symbol', `%${search.trim()}%`)

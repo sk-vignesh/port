@@ -1,8 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { formatAmount, formatDate, ACCOUNT_TX_LABELS, txBadgeClass } from '@/lib/format'
+import { ACCOUNT_TX_LABELS, txBadgeClass } from '@/lib/format'
+import dynamicImport from 'next/dynamic'
+import type { AccountTxRow } from '@/components/grids/AccountTransactionsGrid'
 export const dynamic = 'force-dynamic'
+
+const AccountTransactionsGrid = dynamicImport(() => import('@/components/grids/AccountTransactionsGrid'), { ssr: false })
+
+const CREDIT = new Set(['DEPOSIT','INTEREST','DIVIDENDS','FEES_REFUND','TAX_REFUND','SELL','TRANSFER_IN'])
 
 export default async function AccountDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -16,18 +22,29 @@ export default async function AccountDetailPage({ params }: { params: { id: stri
       .select('*, securities(name)')
       .eq('account_id', id)
       .order('date', { ascending: false })
-      .limit(200),
+      .limit(500),
   ])
 
   if (!account) notFound()
 
-  // Calculate running balance
   let balance = 0
-  const creditTypes = ['DEPOSIT', 'INTEREST', 'DIVIDENDS', 'FEES_REFUND', 'TAX_REFUND', 'SELL', 'TRANSFER_IN']
   for (const tx of transactions ?? []) {
-    if (creditTypes.includes(tx.type)) balance += tx.amount
+    if (CREDIT.has(tx.type)) balance += tx.amount
     else balance -= tx.amount
   }
+
+  const rows: AccountTxRow[] = (transactions ?? []).map(tx => ({
+    id:            tx.id,
+    date:          tx.date,
+    type:          tx.type,
+    type_label:    ACCOUNT_TX_LABELS[tx.type] ?? tx.type,
+    security_name: (tx.securities as unknown as { name: string } | null)?.name ?? null,
+    note:          tx.note ?? null,
+    amount:        tx.amount,
+  }))
+
+  const fmtINR = (v: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v)
 
   return (
     <>
@@ -49,50 +66,25 @@ export default async function AccountDetailPage({ params }: { params: { id: stri
           <div className="metric-card" style={{ padding: '16px 24px', minWidth: 180 }}>
             <div className="metric-label">Balance (est.)</div>
             <div className={`metric-value ${balance >= 0 ? 'amount-positive' : 'amount-negative'}`} style={{ fontSize: '1.3rem' }}>
-              {formatAmount(balance, account.currency_code)}
+              {fmtINR(balance / 100)}
             </div>
           </div>
           <Link href={`/accounts/${id}/edit`} className="btn btn-secondary">Edit</Link>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Transactions ({transactions?.length ?? 0})</span>
+      <div className="card" style={{ padding: '16px 20px' }}>
+        <div className="card-header" style={{ padding: '0 0 12px' }}>
+          <span className="card-title">Transactions ({rows.length})</span>
           <Link href={`/accounts/${id}/transactions/new`} className="btn btn-primary btn-sm">+ Add</Link>
         </div>
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Security</th>
-                <th>Note</th>
-                <th className="table-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {!transactions?.length ? (
-                <tr><td colSpan={5}><div className="empty-state" style={{ padding: 32 }}>
-                  <div className="empty-state-text">No transactions in this account yet</div>
-                </div></td></tr>
-              ) : transactions.map(tx => (
-                <tr key={tx.id}>
-                  <td className="text-sm text-muted">{formatDate(tx.date)}</td>
-                  <td><span className={`badge ${txBadgeClass(tx.type)}`} style={{ fontSize: '0.7rem' }}>
-                    {ACCOUNT_TX_LABELS[tx.type] ?? tx.type}
-                  </span></td>
-                  <td className="text-sm">{(tx.securities as unknown as { name: string } | null)?.name ?? '—'}</td>
-                  <td className="text-sm text-muted truncate" style={{ maxWidth: 160 }}>{tx.note ?? '—'}</td>
-                  <td className={`table-right font-mono text-sm ${creditTypes.includes(tx.type) ? 'amount-positive' : 'amount-negative'}`}>
-                    {creditTypes.includes(tx.type) ? '+' : '-'}{formatAmount(tx.amount, tx.currency_code)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {rows.length === 0 ? (
+          <div className="empty-state" style={{ padding: 32 }}>
+            <div className="empty-state-text">No transactions in this account yet</div>
+          </div>
+        ) : (
+          <AccountTransactionsGrid rows={rows} />
+        )}
       </div>
     </>
   )

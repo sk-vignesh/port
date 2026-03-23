@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef, GridApi } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
@@ -15,6 +15,7 @@ export interface AppGridProps {
   columnDefs: ColDef[]
   exportFilename?: string
   height?: number | string
+  showSearch?: boolean
 }
 
 export default function AppGrid({
@@ -22,8 +23,10 @@ export default function AppGrid({
   columnDefs,
   exportFilename = 'export',
   height = 460,
+  showSearch = true,
 }: AppGridProps) {
-  const gridRef = useRef<AgGridReact>(null)
+  const gridRef  = useRef<AgGridReact>(null)
+  const [search, setSearch] = useState('')
 
   const defaultColDef: ColDef = {
     sortable: true,
@@ -38,6 +41,11 @@ export default function AppGrid({
     width: 40, minWidth: 40, maxWidth: 40,
     pinned: 'left', resizable: false, sortable: false, filter: false,
   }
+
+  const handleSearch = useCallback((val: string) => {
+    setSearch(val)
+    gridRef.current?.api.setGridOption('quickFilterText', val)
+  }, [])
 
   const exportToExcel = useCallback(() => {
     const api = gridRef.current?.api
@@ -56,7 +64,24 @@ export default function AppGrid({
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 2px', flexWrap: 'wrap' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 2px 10px', flexWrap: 'wrap' }}>
+        {showSearch && (
+          <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 320 }}>
+            <span style={{
+              position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+              color: 'var(--color-text-muted)', fontSize: 13, pointerEvents: 'none',
+            }}>🔍</span>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Search…"
+              value={search}
+              onChange={e => handleSearch(e.target.value)}
+              style={{ paddingLeft: 30, fontSize: '0.82rem', height: 34 }}
+            />
+          </div>
+        )}
         <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
           {rowData.length} {rowData.length !== 1 ? 'records' : 'record'}
         </span>
@@ -73,6 +98,7 @@ export default function AppGrid({
         </button>
       </div>
 
+      {/* Grid */}
       <div style={{ height, width: '100%', borderRadius: 8, overflow: 'hidden' }}>
         <AgGridReact
           ref={gridRef}

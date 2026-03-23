@@ -44,6 +44,38 @@ COL_VOL    = "TTLTRADGVOL"
 COL_ISIN   = "ISIN"
 COL_NAME   = "FININSTRMNM"
 
+# ── NSE Index constituents (as of Mar 2026) ───────────────────────────────────
+# Used to set index_priority on each market row
+# Priority 1 = Nifty 50 shown first, 2 = Bank Nifty, 3 = Nifty IT, None = all others
+NIFTY50 = {
+    "ADANIENT","ADANIPORTS","APOLLOHOSP","ASIANPAINT","AXISBANK",
+    "BAJAJ-AUTO","BAJAJFINSV","BAJFINANCE","BPCL","BHARTIARTL",
+    "BRITANNIA","CIPLA","COALINDIA","DIVISLAB","DRREDDY",
+    "EICHERMOT","GRASIM","HCLTECH","HDFCBANK","HDFCLIFE",
+    "HEROMOTOCO","HINDALCO","HINDUNILVR","ICICIBANK","INDUSINDBK",
+    "INFY","ITC","JSWSTEEL","KOTAKBANK","LT",
+    "M&M","MARUTI","NESTLEIND","NTPC","ONGC",
+    "POWERGRID","RELIANCE","SBILIFE","SBIN","SHRIRAMFIN",
+    "SUNPHARMA","TATACONSUM","TATAMOTORS","TATASTEEL","TCS",
+    "TECHM","TITAN","ULTRACEMCO","WIPRO","LTIM",
+}
+
+BANK_NIFTY = {
+    "AUBANK","AXISBANK","BANKBARODA","FEDERALBNK","HDFCBANK",
+    "ICICIBANK","IDFCFIRSTB","INDUSINDBK","KOTAKBANK","PNB","SBIN","YESBANK",
+}
+
+NIFTY_IT = {
+    "COFORGE","HCLTECH","INFY","LTIM","MPHASIS",
+    "PERSISTENT","TATAELXSI","TCS","TECHM","WIPRO",
+}
+
+def index_priority(symbol: str) -> int | None:
+    if symbol in NIFTY50:    return 1
+    if symbol in BANK_NIFTY: return 2
+    if symbol in NIFTY_IT:   return 3
+    return None
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def to_float(val):
@@ -120,16 +152,17 @@ def main():
         if not sym or not close or close <= 0:
             continue
         market_rows.append({
-            "symbol":      sym,
-            "date":        price_date,
-            "name":        str(row.get(COL_NAME, "") or "").strip() or None,
-            "close_price": close,
-            "prev_close":  to_float(row.get(COL_PREV)),
-            "open_price":  to_float(row.get(COL_OPEN)),
-            "high_price":  to_float(row.get(COL_HIGH)),
-            "low_price":   to_float(row.get(COL_LOW)),
-            "volume":      int(to_float(row.get(COL_VOL)) or 0) or None,
-            "isin":        str(row.get(COL_ISIN, "") or "").strip() or None,
+            "symbol":         sym,
+            "date":           price_date,
+            "name":           str(row.get(COL_NAME, "") or "").strip() or None,
+            "close_price":    close,
+            "prev_close":     to_float(row.get(COL_PREV)),
+            "open_price":     to_float(row.get(COL_OPEN)),
+            "high_price":     to_float(row.get(COL_HIGH)),
+            "low_price":      to_float(row.get(COL_LOW)),
+            "volume":         int(to_float(row.get(COL_VOL)) or 0) or None,
+            "isin":           str(row.get(COL_ISIN, "") or "").strip() or None,
+            "index_priority": index_priority(sym),
         })
 
     batch_upsert(supabase, "nse_market_data", market_rows, "symbol,date")
