@@ -3,9 +3,8 @@
 import { useRef, useCallback, useMemo, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import type {
-  ColDef, IDatasource, IGetRowsParams,
-  SortChangedEvent, ValueGetterParams, ValueFormatterParams,
-  ICellRendererParams,
+  ColDef, ValueGetterParams, ValueFormatterParams,
+  ICellRendererParams, PaginationChangedEvent,
 } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
@@ -13,7 +12,19 @@ import { appGridTheme } from '@/lib/agGridTheme'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
-const CACHE_BLOCK = 100  // rows fetched per request
+const CHUNK      = 500   // rows fetched per network request
+const PAGE_SIZE  = 100   // rows per grid page
+
+export interface MarketRow {
+  symbol:      string
+  name:        string | null
+  close_price: number
+  prev_close:  number | null
+  open_price:  number | null
+  high_price:  number | null
+  low_price:   number | null
+  volume:      number | null
+}
 
 const fmtINR = (v: number | null | undefined) =>
   v != null
@@ -34,77 +45,64 @@ function ChangeAmtRenderer({ value }: ICellRendererParams) {
   return <span style={{ color, fontWeight: 600 }}>{num >= 0 ? '+' : ''}{fmtINR(num)}</span>
 }
 
-export default function MarketGrid({ latestDate }: { latestDate: string }) {
+export default function MarketGrid({
+  initialRows,
+  latestDate,
+  initialTotal,
+}: {
+  initialRows: MarketRow[]
+  latestDate: string
+  initialTotal: number
+}) {
   const gridRef = useRef<AgGridReact>(null)
-  const searchRef    = useRef('')      // avoids stale closure in datasource
-  const sortColRef   = useRef('symbol')
-  const sortDirRef   = useRef<'asc' | 'desc'>('asc')
-  const [search, setSearch] = useState('')
-  const [totalRows, setTotalRows] = useState<number | null>(null)
+  const [rows, setRows]         = useState<MarketRow[]>(initialRows)
+  const [offset, setOffset]     = useState(initialRows.length)
+  const [loading, setLoading]   = useState(false)
+  const [hasMore, setHasMore]   = useState(initialRows.length < initialTotal)
+  const [search, setSearch]     = useState('')
 
-  // ── Datasource ────────────────────────────────────────────────────────────
-  const buildUrl = useCallback((start: number, end: number) => {
-    const params = new URLSearchParams({
-      date:    latestDate,
-      start:   String(start),
-      end:     String(end),
-      sortCol: sortColRef.current,
-      sortDir: sortDirRef.current,
-    })
-    if (searchRef.current.trim()) params.set('search', searchRef.current.trim())
-    return `/api/market-data?${params}`
-  }, [latestDate])
+  // ── Fetch next chunk ──────────────────────────────────────────────────────
+  const fetchNext = useCallback(async () => {
+    if (loading || !hasMore) return
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        date: latestDate, start: String(offset), end: String(offset + CHUNK - 1),
+      })
+      const { rows: next, total } = await fetch(`/api/market-data?${params}`).then(r => r.json())
+      setRows(prev => [...prev, ...(next ?? [])])
+      setOffset(prev => prev + (next?.length ?? 0))
+      if (offset + (next?.length ?? 0) >= total) setHasMore(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [loading, hasMore, offset, latestDate])
 
-  const datasource = useMemo((): IDatasource => ({
-    getRows(params: IGetRowsParams) {
-      const start = params.startRow
-      const end   = params.endRow - 1
-      fetch(buildUrl(start, end))
-        .then(r => r.json())
-        .then(({ rows, total }: { rows: unknown[]; total: number }) => {
-          setTotalRows(total)
-          params.successCallback(rows ?? [], total)
-        })
-        .catch(() => params.failCallback())
-    },
-  }), [buildUrl])
-
-  const onGridReady = useCallback(() => {
-    gridRef.current?.api.setGridOption('datasource', datasource)
-  }, [datasource])
-
-  // Re-fetch from row 0 when search or sort changes
-  const refresh = useCallback(() => {
-    gridRef.current?.api.setGridOption('datasource', datasource)
-  }, [datasource])
+  // Trigger fetch when user reaches the last page of currently loaded rows
+  const onPaginationChanged = useCallback((e: PaginationChangedEvent) => {
+    const api = e.api
+    const currentPage = api.paginationGetCurrentPage()        // 0-indexed
+    const totalPages  = api.paginationGetTotalPages()
+    if (hasMore && !loading && currentPage >= totalPages - 1) {
+      fetchNext()
+    }
+  }, [hasMore, loading, fetchNext])
 
   const handleSearch = useCallback((val: string) => {
-    searchRef.current = val
     setSearch(val)
-    refresh()
-  }, [refresh])
+    gridRef.current?.api.setGridOption('quickFilterText', val)
+  }, [])
 
-  const onSortChanged = useCallback((e: SortChangedEvent) => {
-    const cols = e.api.getColumnState().filter(c => c.sort)
-    if (cols.length > 0) {
-      sortColRef.current  = cols[0].colId
-      sortDirRef.current  = (cols[0].sort as 'asc' | 'desc') ?? 'asc'
-    } else {
-      sortColRef.current = 'symbol'
-      sortDirRef.current = 'asc'
-    }
-    refresh()
-  }, [refresh])
-
-  // ── Excel export ─────────────────────────────────────────────────────────
-  const exportToExcel = useCallback(async () => {
-    const url = buildUrl(0, (totalRows ?? 2500))
-    const { rows } = await fetch(url).then(r => r.json())
-    const ws = XLSX.utils.json_to_sheet(rows ?? [])
+  const exportToExcel = useCallback(() => {
+    const api = gridRef.current?.api
+    if (!api) return
+    const selected = api.getSelectedRows()
+    const data = selected.length > 0 ? selected : rows
+    const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'NSE Market Data')
     XLSX.writeFile(wb, `nse_market_${latestDate}.xlsx`)
-  }, [buildUrl, latestDate, totalRows])
+  }, [rows, latestDate])
 
   // ── Column definitions ────────────────────────────────────────────────────
   const colDefs: ColDef[] = useMemo((): ColDef[] => [
@@ -113,7 +111,7 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
       cellStyle: { color: 'var(--color-accent-light)' },
     },
     {
-      field: 'name', headerName: 'Company', width: 260, minWidth: 180,
+      field: 'name', headerName: 'Company', width: 240, minWidth: 160,
       cellStyle: { color: 'var(--color-text-secondary)' },
     },
     {
@@ -143,9 +141,8 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
     {
       colId: 'chg', headerName: 'Change', type: 'numericColumn', width: 130, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
-        if (!p.data) return null
-        const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
-        return close_price != null && prev_close != null ? close_price - prev_close : null
+        const r = p.data as MarketRow
+        return r?.close_price != null && r?.prev_close != null ? r.close_price - r.prev_close : null
       },
       valueFormatter: (p: ValueFormatterParams) => p.value != null ? (p.value >= 0 ? '+' : '') + fmtINR(p.value) : '—',
       cellRenderer: ChangeAmtRenderer,
@@ -153,10 +150,9 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
     {
       colId: 'pct', headerName: '% Change', type: 'numericColumn', width: 110, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
-        if (!p.data) return null
-        const { close_price, prev_close } = p.data as { close_price: number; prev_close: number }
-        if (!close_price || !prev_close) return null
-        return ((close_price - prev_close) / prev_close) * 100
+        const r = p.data as MarketRow
+        if (!r?.close_price || !r?.prev_close) return null
+        return ((r.close_price - r.prev_close) / r.prev_close) * 100
       },
       cellRenderer: ChangeCellRenderer,
     },
@@ -170,9 +166,9 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
 
   const selectionColDef: ColDef = useMemo(() => ({
     checkboxSelection: true,
-    headerCheckboxSelection: false,  // no select-all in infinite mode
+    headerCheckboxSelection: true,
     width: 40, minWidth: 40, maxWidth: 40,
-    pinned: 'left', resizable: false, sortable: false,
+    pinned: 'left', resizable: false, sortable: false, filter: false,
   }), [])
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -180,16 +176,12 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
     <div>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px 10px', flexWrap: 'wrap' }}>
-        {/* Search */}
-        <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 360 }}>
-          <span style={{
-            position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-            color: 'var(--color-text-muted)', fontSize: 14, pointerEvents: 'none',
-          }}>🔍</span>
+        <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 340 }}>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
           <input
             type="text"
             className="form-input"
-            placeholder="Search symbol…"
+            placeholder="Search symbol or company…"
             value={search}
             onChange={e => handleSearch(e.target.value)}
             style={{ paddingLeft: 32, fontSize: '0.82rem', height: 34 }}
@@ -197,7 +189,8 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
         </div>
 
         <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-          {totalRows != null ? `${totalRows.toLocaleString('en-IN')} securities` : '…'}
+          {rows.length.toLocaleString('en-IN')} of {initialTotal.toLocaleString('en-IN')} loaded
+          {loading && ' · fetching…'}
         </span>
         <div style={{ flex: 1 }} />
 
@@ -213,33 +206,22 @@ export default function MarketGrid({ latestDate }: { latestDate: string }) {
         </button>
       </div>
 
-      {/* Grid */}
       <div style={{ height: 640, width: '100%', borderRadius: 8, overflow: 'hidden' }}>
         <AgGridReact
           ref={gridRef}
           theme={appGridTheme}
-          rowModelType="infinite"
-          datasource={datasource}
-          cacheBlockSize={CACHE_BLOCK}
-          infiniteInitialRowCount={CACHE_BLOCK}
-          maxConcurrentDatasourceRequests={1}
+          rowData={rows}
           columnDefs={[selectionColDef, ...colDefs]}
-          defaultColDef={{ sortable: true, resizable: true, minWidth: 90 }}
+          defaultColDef={{ sortable: true, resizable: true, minWidth: 90, filter: true }}
           rowSelection="multiple"
           suppressRowClickSelection
           animateRows
-          onGridReady={onGridReady}
-          onSortChanged={onSortChanged}
+          pagination
+          paginationPageSize={PAGE_SIZE}
+          paginationPageSizeSelector={[20, 50, 100]}
+          onPaginationChanged={onPaginationChanged}
           domLayout="normal"
         />
-      </div>
-
-      <div style={{
-        padding: '8px 2px', fontSize: '0.72rem', color: 'var(--color-text-muted)',
-        display: 'flex', gap: 8, alignItems: 'center', marginTop: 6,
-      }}>
-        <span>📡</span>
-        <span>NSE EQ bhav copy · loads {CACHE_BLOCK} rows at a time as you scroll</span>
       </div>
     </div>
   )
