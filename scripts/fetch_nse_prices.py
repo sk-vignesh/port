@@ -42,6 +42,7 @@ COL_HIGH   = "HGHPRIC"
 COL_LOW    = "LWPRIC"
 COL_VOL    = "TTLTRADGVOL"
 COL_ISIN   = "ISIN"
+COL_NAME   = "FININSTRMNM"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,7 @@ def main():
         market_rows.append({
             "symbol":      sym,
             "date":        price_date,
+            "name":        str(row.get(COL_NAME, "") or "").strip() or None,
             "close_price": close,
             "prev_close":  to_float(row.get(COL_PREV)),
             "open_price":  to_float(row.get(COL_OPEN)),

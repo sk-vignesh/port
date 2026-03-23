@@ -21,7 +21,7 @@ export async function GET(req: Request) {
 
   let query = supabase
     .from('nse_market_data')
-    .select('symbol, close_price, prev_close, open_price, high_price, low_price, volume, isin', { count: 'exact' })
+    .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
     .eq('date', date)
     .range(start, end)
     .order(SORTABLE.has(sortCol) ? sortCol : 'symbol', { ascending: sortDir })
