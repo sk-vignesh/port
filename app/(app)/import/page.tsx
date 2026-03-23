@@ -320,19 +320,32 @@ export default function ImportPage() {
         {!trades.length && !result && (
           <div className="card">
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Broker selector dropdown */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>Your broker</label>
+              {/* Broker selector — compact inline */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Need export help?</span>
                   <select
-                    className="form-input"
                     value={selectedGuideId}
                     onChange={e => setSelectedGuideId(e.target.value)}
-                    style={{ flex: 1 }}
+                    style={{
+                      fontSize: '0.8rem', fontWeight: 500,
+                      color: selectedGuideId
+                        ? (BROKER_GUIDES.find(g => g.id === selectedGuideId)?.color ?? 'var(--color-text)')
+                        : 'var(--color-text-muted)',
+                      background: 'var(--color-surface-2)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 20, padding: '3px 10px 3px 10px',
+                      cursor: 'pointer', outline: 'none',
+                      appearance: 'none', WebkitAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 8px center',
+                      paddingRight: 24,
+                    }}
                   >
-                    <option value="">— Select to see export steps —</option>
+                    <option value="">Choose broker ▾</option>
                     {BROKER_GUIDES.map(g => (
-                      <option key={g.id} value={g.id}>{g.name} ({g.format})</option>
+                      <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
                 </div>
@@ -343,22 +356,22 @@ export default function ImportPage() {
                   return (
                     <div style={{
                       background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)',
-                      padding: '14px 16px', borderLeft: `3px solid ${guide.color}`,
+                      padding: '12px 14px', borderLeft: `3px solid ${guide.color}`,
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.88rem', color: guide.color }}>{guide.name}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.82rem', color: guide.color }}>{guide.name}</span>
                         <a href={guide.href} target="_blank" rel="noopener noreferrer"
-                           style={{ fontSize: '0.75rem', color: 'var(--color-accent-light)' }}>
+                           style={{ fontSize: '0.74rem', color: 'var(--color-accent-light)' }}>
                           Open {guide.name} ↗
                         </a>
                       </div>
-                      <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {guide.steps.map((step, i) => (
-                          <li key={i} style={{ fontSize: '0.82rem', color: 'var(--color-text)', lineHeight: 1.5 }}>{step}</li>
+                          <li key={i} style={{ fontSize: '0.79rem', color: 'var(--color-text)', lineHeight: 1.5 }}>{step}</li>
                         ))}
                       </ol>
-                      <div style={{ marginTop: 10, fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-                        File format: <strong>{guide.format}</strong>
+                      <div style={{ marginTop: 8, fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                        File format: <strong style={{ color: 'var(--color-text)' }}>{guide.format}</strong>
                       </div>
                     </div>
                   )
