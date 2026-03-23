@@ -11,8 +11,8 @@ const montserrat = Montserrat({
 })
 
 export const metadata: Metadata = {
-  title: 'Portfolio Performance',
-  description: 'Track and evaluate your investment portfolio across stocks, cryptocurrencies, and other assets.',
+  title: 'Apna Stocks',
+  description: 'Apna Stocks — track and analyse your Indian stock portfolio. अपना portfolio, अपना control.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
