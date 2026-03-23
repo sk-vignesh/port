@@ -1,0 +1,37 @@
+name: Groww Portfolio Sync
+
+on:
+  # Daily at 09:00 IST (03:30 UTC) — well after NSE open, picks up previous day's trades
+  schedule:
+    - cron: '30 3 * * *'
+
+  # Trigger manually from the Actions tab (useful for first-time import / debugging)
+  workflow_dispatch:
+
+jobs:
+  sync-groww:
+    name: Sync Groww holdings & trades → Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Sync Groww → Supabase
+        env:
+          GROWW_API_KEY:            ${{ secrets.GROWW_API_KEY }}
+          GROWW_API_SECRET:         ${{ secrets.GROWW_API_SECRET }}
+          SUPABASE_URL:             ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/sync_groww.py
