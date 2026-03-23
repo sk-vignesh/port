@@ -106,13 +106,47 @@ def get_bhav(max_lookback=MAX_LOOKBACK):
 
 
 def batch_upsert(supabase, table: str, rows: list, conflict: str):
-    """Upsert rows in batches to avoid request size limits."""
+    """Upsert rows in batches.
+    If PostgREST returns PGRST204 (column not in schema cache — happens right
+    after ALTER TABLE ADD COLUMN before the cache refreshes), the offending
+    column is stripped from every row and the batch is retried automatically.
+    This way the workflow never crashes just because a new column was added.
+    """
+    import re as _re
+    stripped_cols: set = set()
+
+    def _upsert_chunk(chunk):
+        attempt = 0
+        local_chunk = chunk
+        while attempt < 5:
+            try:
+                supabase.table(table).upsert(local_chunk, on_conflict=conflict).execute()
+                return
+            except Exception as exc:
+                msg = str(exc)
+                # PGRST204: column not found in schema cache
+                m = _re.search(r"Could not find the '(\w+)' column", msg)
+                if m:
+                    col = m.group(1)
+                    stripped_cols.add(col)
+                    print(f"\n  ⚠  Schema cache missing '{col}' — stripping and retrying…")
+                    local_chunk = [{k: v for k, v in r.items() if k not in stripped_cols}
+                                   for r in local_chunk]
+                    attempt += 1
+                else:
+                    raise
+
     total = len(rows)
     for i in range(0, total, BATCH_SIZE):
         chunk = rows[i : i + BATCH_SIZE]
-        supabase.table(table).upsert(chunk, on_conflict=conflict).execute()
+        if stripped_cols:
+            chunk = [{k: v for k, v in r.items() if k not in stripped_cols} for r in chunk]
+        _upsert_chunk(chunk)
         print(f"    — upserted {min(i + BATCH_SIZE, total)}/{total}", end="\r")
     print()
+    if stripped_cols:
+        print(f"  ⚠  Columns omitted due to schema cache lag: {', '.join(stripped_cols)}")
+        print(f"     Reload PostgREST schema cache in Supabase Dashboard → Settings → API")
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
