@@ -42,29 +42,50 @@ function detectType(raw: string): 'buy' | 'sell' {
   return 'buy'
 }
 
-function detectBroker(headers: string[]): 'groww' | 'zerodha' | 'angelone' | 'upstox' | 'unknown' {
-  if (headers.some(h => h.includes('order_execution_time'))) return 'zerodha'
-  if (headers.some(h => h.includes('security_name') || h.includes('scrip_name'))) return 'groww'
-  if (headers.some(h => h.includes('scrip_symbol') || h.includes('net_qty') || h.includes('net_rate'))) return 'angelone'
-  if (headers.some(h => h.includes('instrument_key') || h.includes('segment') || (h.includes('side') && headers.includes('segment')))) return 'upstox'
+function detectBroker(headers: string[]): string {
+  const h = headers
+  if (h.some(x => x.includes('order_execution_time'))) return 'zerodha'
+  if (h.some(x => x.includes('security_name') || x.includes('scrip_name'))) return 'groww'
+  if (h.some(x => x.includes('scrip_symbol') || x.includes('net_qty') || x.includes('net_rate'))) return 'angelone'
+  if (h.some(x => x.includes('instrument_key'))) return 'upstox'
+  if (h.some(x => x.includes('script_code') || x.includes('order_reference'))) return 'icici'
+  if (h.some(x => x.includes('security_id') || x.includes('fill_timestamp') || x.includes('underlying_symbol'))) return 'hdfc'
+  if (h.some(x => x.includes('exchange_trade_id') || x.includes('dhan'))) return 'dhan'
+  if (h.some(x => x.includes('order_rate') || x.includes('buysell'))) return '5paisa'
+  if (h.some(x => x.includes('client_id') && !x.includes('trade'))) return 'sbicap'
+  // Kotak Neo exports: symbol + order_no + rate (no price column)
+  if (h.includes('rate') && h.includes('order_no') && !h.includes('fill_timestamp')) return 'kotak'
   return 'unknown'
 }
 
-// Unified column aliases — Zerodha, Groww, Angel One, Upstox
+// Unified column aliases — 10 Indian brokers
 const ALIASES: Record<string, string[]> = {
   symbol:   ['symbol', 'trading_symbol', 'scrip', 'security_name', 'scrip_name', 'instrument',
-             'scrip_symbol', 'stock_symbol', 'tradingsymbol', 'script_name'],
+             'scrip_symbol', 'stock_symbol', 'tradingsymbol', 'script_name',
+             /* ICICI */ 'script_code', 'stock_code',
+             /* HDFC  */ 'underlying_symbol', 'security_id', 'company_name'],
   isin:     ['isin', 'isin_code'],
   date:     ['trade_date', 'order_execution_time', 'date', 'trade_date_time', 'time', 'timestamp',
-             'order_date', 'transaction_date', 'trade_time'],
+             'order_date', 'transaction_date', 'trade_time',
+             /* HDFC  */ 'fill_timestamp',
+             /* ICICI */ 'settlement_date'],
   type:     ['trade_type', 'transaction_type', 'buy_sell', 'type', 'order_type', 'buysell',
-             'side', 'trade_side', 'action', 'b_s', 'buy___sell'],
-  qty:      ['quantity', 'qty', 'units', 'trade_quantity', 'net_qty', 'filled_quantity', 'executed_quantity'],
-  price:    ['price', 'trade_price', 'average_price', 'avg_price', 'trade_rate',
-             'net_rate', 'avg__price', 'executed_price', 'fill_price'],
+             'side', 'trade_side', 'action', 'b_s', 'buy___sell',
+             /* 5paisa */ 'buy_sell_indicator'],
+  qty:      ['quantity', 'qty', 'units', 'trade_quantity', 'net_qty', 'filled_quantity', 'executed_quantity',
+             /* HDFC  */ 'traded_quantity'],
+  price:    ['price', 'trade_price', 'average_price', 'avg_price', 'trade_rate', 'net_rate',
+             'avg__price', 'executed_price', 'fill_price',
+             /* Kotak */ 'rate',
+             /* 5paisa*/ 'order_rate',
+             /* HDFC  */ 'avg_price'],
   trade_id: ['trade_id', 'order_id', 'trade_no', 'tradeid', 'reference_number',
-             'order_no', 'orderid', 'trade_number'],
-  exchange: ['exchange', 'market', 'exch', 'exchange_segment'],
+             'order_no', 'orderid', 'trade_number',
+             /* ICICI */ 'order_reference', 'order_reference_no',
+             /* HDFC  */ 'client_id',
+             /* Dhan  */ 'exchange_trade_id', 'exchange_order_id',
+             /* 5paisa*/ 'exchange_order_id_nse_bse'],
+  exchange: ['exchange', 'market', 'exch', 'exchange_segment', 'exchange_code'],
 }
 
 function findCol(headers: string[], key: string): number {
@@ -189,11 +210,17 @@ const COLS = [
 ]
 
 const BROKER_BADGE: Record<string, { label: string; color: string }> = {
-  zerodha:  { label: '🟣 Zerodha detected',  color: '#7c3aed' },
-  groww:    { label: '🟢 Groww detected',    color: '#16a34a' },
-  angelone: { label: '🟠 Angel One detected',color: '#ea580c' },
-  upstox:   { label: '🔵 Upstox detected',   color: '#2563eb' },
-  unknown:  { label: '⚪ Unknown format',     color: 'var(--color-text-muted)' },
+  zerodha:  { label: '🟣 Zerodha',   color: '#7c3aed' },
+  groww:    { label: '🟢 Groww',     color: '#16a34a' },
+  angelone: { label: '🟠 Angel One', color: '#ea580c' },
+  upstox:   { label: '🔵 Upstox',    color: '#2563eb' },
+  icici:    { label: '🟡 ICICI Direct', color: '#ca8a04' },
+  hdfc:     { label: '🟤 HDFC Sec',  color: '#dc2626' },
+  kotak:    { label: '⚪ Kotak Neo',  color: '#6b7280' },
+  sbicap:   { label: '🟣 SBICap',   color: '#4f46e5' },
+  dhan:     { label: '🟢 Dhan',      color: '#059669' },
+  '5paisa': { label: '🔵 5paisa',    color: '#0284c7' },
+  unknown:  { label: '⚪ Unknown',    color: 'var(--color-text-muted)' },
 }
 
 interface Portfolio { id: string; name: string }
@@ -245,7 +272,7 @@ export default function ImportPage() {
     <>
       <div className="page-header">
         <h1 className="page-title">Import Trades</h1>
-        <p className="page-subtitle">Upload a Trade Book from Zerodha, Groww, Angel One or Upstox to import your transactions</p>
+        <p className="page-subtitle">Upload a Trade Book from any major Indian broker — 10 brokers supported</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -255,35 +282,21 @@ export default function ImportPage() {
           <div className="card">
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {/* Instructions */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {[
-                  {
-                    broker: '🟣 Zerodha',
-                    steps: 'console.zerodha.com → Reports → Trade Book → Download CSV',
-                    href: 'https://console.zerodha.com/reports/tradebook',
-                    format: 'CSV',
-                  },
-                  {
-                    broker: '🟢 Groww',
-                    steps: 'groww.in → Profile → Reports → Equity → Download XLSX',
-                    href: 'https://groww.in/reports',
-                    format: 'XLSX / CSV',
-                  },
-                  {
-                    broker: '🟠 Angel One',
-                    steps: 'angelone.in → Reports → Transactional Reports → Trade Book → Download Excel',
-                    href: 'https://www.angelone.in/trade/orders/tradebook',
-                    format: 'XLSX / CSV',
-                  },
-                  {
-                    broker: '🔵 Upstox',
-                    steps: 'upstox.com → Reports → Trade History → Select FY → Download CSV',
-                    href: 'https://account.upstox.com/reports',
-                    format: 'CSV / XLSX',
-                  },
+                  { broker: '🟣 Zerodha',     steps: 'console.zerodha.com → Reports → Trade Book → Download CSV',                          href: 'https://console.zerodha.com/reports/tradebook',        format: 'CSV' },
+                  { broker: '🟢 Groww',       steps: 'groww.in → Profile → Reports → Equity → Download XLSX',                              href: 'https://groww.in/reports',                             format: 'XLSX/CSV' },
+                  { broker: '🟠 Angel One',   steps: 'angelone.in → Reports → Transactional Reports → Trade Book → Download',              href: 'https://www.angelone.in/trade/orders/tradebook',        format: 'XLSX/CSV' },
+                  { broker: '🔵 Upstox',      steps: 'account.upstox.com → Reports → Trade History → FY → Download',                      href: 'https://account.upstox.com/reports',                   format: 'CSV/XLSX' },
+                  { broker: '🟡 ICICI Direct',steps: 'icicidirect.com → Portfolio → Equity → Trade Book → Download',                       href: 'https://www.icicidirect.com',                          format: 'XLSX/CSV' },
+                  { broker: '🔴 HDFC Sec',    steps: 'hdfcsec.com → My Account → Trade Details → Export to Excel',                         href: 'https://www.hdfcsec.com',                              format: 'XLSX' },
+                  { broker: '⚪ Kotak Neo',   steps: 'kotak.com/neo → Orders tab → Download CSV',                                          href: 'https://www.kotaksecurities.com',                      format: 'CSV' },
+                  { broker: '🔵 SBICap',      steps: 'sbicapsec.com → Reports → Trade Book → Export',                                      href: 'https://www.sbicapsec.com',                            format: 'XLSX/CSV' },
+                  { broker: '🟢 Dhan',        steps: 'dhan.co → Reports → Trade History → Download CSV',                                   href: 'https://dhan.co',                                      format: 'CSV' },
+                  { broker: '🔵 5paisa',      steps: '5paisa.com → My Account → Reports → Trade Book → Download',                          href: 'https://www.5paisa.com',                               format: 'CSV' },
                 ].map(b => (
-                  <div key={b.broker} style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', fontSize: '0.82rem', lineHeight: 1.8 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 4 }}>{b.broker} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>({b.format})</span></div>
+                  <div key={b.broker} style={{ background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', padding: '10px 12px', fontSize: '0.79rem', lineHeight: 1.7 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--color-text)', marginBottom: 2 }}>{b.broker} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', fontSize: '0.72rem' }}>({b.format})</span></div>
                     <a href={b.href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-light)' }}>
                       {b.steps}
                     </a>
