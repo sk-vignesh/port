@@ -29,6 +29,49 @@ const CHART_RANGES = [
   { label: 'All', days: 9999 },
 ]
 
+// ── Return calculation over a window ──────────────────────────────────────────
+function periodReturn(prices: PriceRow[], days: number): number | null {
+  if (prices.length < 2) return null
+  const latest = prices.at(-1)!.value
+  const cutoff = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10)
+  const baseline = prices.find(p => p.date >= cutoff)
+  if (!baseline || baseline.value === 0) return null
+  return ((latest - baseline.value) / baseline.value) * 100
+}
+
+const PERF_PERIODS = [
+  { label: '1M',  days: 30 },
+  { label: '3M',  days: 90 },
+  { label: '6M',  days: 180 },
+  { label: '1Y',  days: 365 },
+  { label: '5Y',  days: 365 * 5 },
+]
+
+function PerfStrip({ prices }: { prices: PriceRow[] }) {
+  if (prices.length < 2) return null
+  return (
+    <div style={{ display: 'flex', gap: 0, borderTop: '1px solid var(--color-border)', marginTop: 8 }}>
+      {PERF_PERIODS.map(({ label, days }) => {
+        const ret = periodReturn(prices, days)
+        const pos = ret == null ? null : ret >= 0
+        return (
+          <div key={label} style={{ flex: 1, textAlign: 'center', padding: '10px 4px', borderRight: '1px solid var(--color-border)' }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: 4 }}>
+              {label}
+            </div>
+            <div style={{
+              fontSize: '0.95rem', fontWeight: 700,
+              color: pos == null ? 'var(--color-text-muted)' : pos ? 'var(--color-success)' : 'var(--color-danger)',
+            }}>
+              {ret == null ? '—' : `${pos ? '+' : ''}${ret.toFixed(2)}%`}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
 const fmtPrice = (v: number, cur: string) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(v)
@@ -122,6 +165,7 @@ export default function SecurityDetailClient({ securityId, currency, prices, tra
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          <PerfStrip prices={prices} />
         </div>
       )}
 

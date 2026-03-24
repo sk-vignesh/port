@@ -30,6 +30,7 @@ const navItems = [
     items: [
       { href: '/',          label: 'Dashboard',    icon: <LayoutDashboard size={15} />,    color: '#3b82f6' },
       { href: '/accounts',  label: 'Accounts',     icon: <Wallet size={15} />,             color: '#14b8a6' },
+      { href: '/holdings',  label: 'All Holdings', icon: <Layers size={15} />,             color: '#8b5cf6' },
     ],
   },
   {

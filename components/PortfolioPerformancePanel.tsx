@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { formatAmount, formatPercent, formatShares } from '@/lib/format'
-import Link from 'next/link'
+import { formatAmount, formatPercent } from '@/lib/format'
+import dynamicImport from 'next/dynamic'
+import type { HoldingRow } from '@/components/grids/HoldingsGrid'
+
+const HoldingsGrid = dynamicImport(() => import('@/components/grids/HoldingsGrid'), { ssr: false })
 
 interface Holding {
   securityId: string; name: string; currency: string
@@ -27,7 +30,7 @@ function PctBadge({ value, label }: { value: number; label: string }) {
         fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.02em',
         color: pos ? 'var(--color-success)' : 'var(--color-danger)',
       }}>
-        {pos ? '+' : ''}{formatPercent(value * 100)}
+        {formatPercent(value * 100)}
       </div>
     </div>
   )
@@ -120,7 +123,7 @@ export default function PortfolioPerformancePanel({ portfolioId, currency }: { p
                   fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.02em',
                   color: data.absoluteGain >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
                 }}>
-                  {data.absoluteGain >= 0 ? '+' : ''}{formatAmount(data.absoluteGain, currency)}
+                  {formatAmount(data.absoluteGain, currency)}
                 </div>
               </div>
               <PctBadge value={data.ttwror} label="TTWROR (total)" />
@@ -133,50 +136,13 @@ export default function PortfolioPerformancePanel({ portfolioId, currency }: { p
         </div>
       </div>
 
-      {/* Enriched holdings table */}
+      {/* Enriched holdings — AG Grid */}
       {data.holdings.length > 0 && (
         <div className="card mb-6">
           <div className="card-header">
             <span className="card-title">Holdings ({data.holdings.length})</span>
           </div>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Security</th>
-                  <th className="table-right">Shares</th>
-                  <th className="table-right">Avg Cost/Share</th>
-                  <th className="table-right">Cost Basis</th>
-                  <th className="table-right">Current Value</th>
-                  <th className="table-right">Gain / Loss</th>
-                  <th className="table-right">Return %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.holdings.map(h => (
-                  <tr key={h.securityId}>
-                    <td>
-                      <Link href={`/securities/${h.securityId}`} style={{ fontWeight: 600, color: 'var(--color-accent-light)' }}>
-                        {h.name}
-                      </Link>
-                    </td>
-                    <td className="table-right text-sm">{formatShares(h.shares)}</td>
-                    <td className="table-right text-sm">{formatAmount(h.avgCostPerShare, h.currency)}</td>
-                    <td className="table-right text-sm">{formatAmount(h.costBasis, h.currency)}</td>
-                    <td className="table-right text-sm">
-                      {h.currentValue != null ? formatAmount(h.currentValue, h.currency) : <span className="text-muted">—</span>}
-                    </td>
-                    <td className={`table-right text-sm ${h.gain != null ? (h.gain >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
-                      {h.gain != null ? `${h.gain >= 0 ? '+' : ''}${formatAmount(h.gain, h.currency)}` : '—'}
-                    </td>
-                    <td className={`table-right text-sm ${h.gainPct != null ? (h.gainPct >= 0 ? 'amount-positive' : 'amount-negative') : ''}`}>
-                      {h.gainPct != null ? `${h.gainPct >= 0 ? '+' : ''}${formatPercent(h.gainPct * 100)}` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <HoldingsGrid rows={data.holdings as HoldingRow[]} />
         </div>
       )}
     </>

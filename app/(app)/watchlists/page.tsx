@@ -2,27 +2,38 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import dynamicImport from 'next/dynamic'
-import type { WatchlistRow } from '@/components/grids/WatchlistGrid'
+import type { WatchlistSecurityItem } from '@/components/WatchlistCards'
 export const dynamic = 'force-dynamic'
 
-const WatchlistGrid = dynamicImport(() => import('@/components/grids/WatchlistGrid'), { ssr: false })
+const WatchlistCards = dynamicImport(() => import('@/components/WatchlistCards'), { ssr: false })
 
 export default async function WatchlistsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: watchlists } = await supabase
-    .from('watchlists')
-    .select('*, watchlist_securities(security_id, sort_order, securities(id, name, currency_code, isin, ticker_symbol, security_latest_prices(*)))')
-    .order('sort_order')
+  const [{ data: watchlists }, { data: alerts }] = await Promise.all([
+    supabase
+      .from('watchlists')
+      .select('*, watchlist_securities(security_id, sort_order, securities(id, name))')
+      .order('sort_order'),
+    supabase
+      .from('watch_alerts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true),
+  ])
+
+  // Index alerts by security_id
+  type AlertRow = { id: string; security_id: string; alert_type: string; threshold: number; note: string | null; is_active: boolean; triggered_at: string | null }
+  const alertMap = new Map((alerts as AlertRow[] ?? []).map(a => [a.security_id, a]))
 
   return (
     <>
       <div className="page-header flex-between">
         <div>
           <h1 className="page-title">Watchlists</h1>
-          <p className="page-subtitle">Monitor securities of interest</p>
+          <p className="page-subtitle">Monitor securities and set price alerts</p>
         </div>
         <Link href="/watchlists/new" className="btn btn-primary">+ New Watchlist</Link>
       </div>
@@ -37,30 +48,30 @@ export default async function WatchlistsPage() {
           </div>
         </div>
       ) : watchlists.map(wl => {
-        const items = (wl.watchlist_securities as unknown as {
+        const securities = (wl.watchlist_securities as unknown as {
           security_id: string; sort_order: number;
-          securities: {
-            id: string; name: string; currency_code: string; ticker_symbol: string | null
-            security_latest_prices: { value: number; previous_close: number | null } | null
-          } | null
-        }[] ?? []).sort((a, b) => a.sort_order - b.sort_order)
+          securities: { id: string; name: string } | null
+        }[] ?? [])
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .filter(s => s.securities != null)
 
-        const rows: WatchlistRow[] = items
-          .filter(item => item.securities != null)
-          .map(item => {
-            const sec = item.securities!
-            const lp  = sec.security_latest_prices
-            const change_pct = lp?.previous_close
-              ? ((lp.value - lp.previous_close) / lp.previous_close) * 100
-              : null
-            return {
-              id:         item.security_id,
-              name:       sec.name,
-              ticker:     sec.ticker_symbol,
-              price:      lp?.value ?? null,
-              change_pct,
-            }
-          })
+        const items: WatchlistSecurityItem[] = securities.map(s => {
+          const raw = alertMap.get(s.security_id) ?? null
+          return {
+            id: s.security_id,
+            name: s.securities!.name,
+            alert: raw ? {
+              id: raw.id,
+              alert_type: raw.alert_type as 'PRICE_ABOVE' | 'PRICE_BELOW' | 'CHANGE_PCT_UP' | 'CHANGE_PCT_DOWN',
+              threshold: raw.threshold,
+              note: raw.note,
+              is_active: raw.is_active,
+              triggered_at: raw.triggered_at,
+            } : null,
+          }
+        })
+
+        const alertCount = items.filter(i => i.alert?.is_active).length
 
         return (
           <div key={wl.id} className="card mb-6" style={{ padding: '16px 20px' }}>
@@ -68,16 +79,15 @@ export default async function WatchlistsPage() {
               <span className="card-title">{wl.name}</span>
               <div className="flex flex-gap-2">
                 <span className="badge badge-gray">{items.length} items</span>
+                {alertCount > 0 && (
+                  <span className="badge" style={{ background: '#f59e0b15', color: '#f59e0b', border: '1px solid #f59e0b40' }}>
+                    🔔 {alertCount} alert{alertCount > 1 ? 's' : ''}
+                  </span>
+                )}
                 <Link href={`/watchlists/${wl.id}/edit`} className="btn btn-icon btn-sm">✏️</Link>
               </div>
             </div>
-            {rows.length === 0 ? (
-              <div className="empty-state" style={{ padding: 24 }}>
-                <div className="empty-state-text">Watchlist is empty — add securities</div>
-              </div>
-            ) : (
-              <WatchlistGrid rows={rows} />
-            )}
+            <WatchlistCards items={items} watchlistId={wl.id} />
           </div>
         )
       })}
