@@ -222,7 +222,7 @@ def main():
             print(f"  ⚠  {nse_sym} ({sec['name']}): not in NSE EQ data — skipped")
             skipped += 1; continue
 
-        close_int     = round(mkt["close_price"] * PRICE_SCALE)
+        close_int     = round(mkt["close"] * PRICE_SCALE)
         prev_close_int = round(mkt["prev_close"] * PRICE_SCALE) if mkt["prev_close"] else None
 
         supabase.table("security_prices").upsert(
@@ -235,7 +235,7 @@ def main():
             latest["previous_close"] = prev_close_int
         supabase.table("security_latest_prices").upsert(latest, on_conflict="security_id").execute()
 
-        print(f"  ✓  {nse_sym}: ₹{mkt['close_price']:,.2f}" +
+        print(f"  ✓  {nse_sym}: ₹{mkt['close']:,.2f}" +
               (f"  (prev ₹{mkt['prev_close']:,.2f})" if mkt["prev_close"] else ""))
         updated += 1
 
