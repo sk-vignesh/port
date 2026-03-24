@@ -77,14 +77,43 @@ def index_priority(sym):
     return None
 
 def to_float(val):
-    try:    return float(val)
-    except: return None
+    try:
+        return float(str(val).replace(",", "").strip())
+    except (ValueError, TypeError):
+        return None
+
+
+import re as _re
 
 def batch_upsert(supabase, table, rows, conflict_cols):
-    for i in range(0, len(rows), BATCH_SIZE):
+    """Upsert in batches with schema-cache column-strip fallback."""
+    stripped_cols: set = set()
+
+    def _upsert_chunk(chunk):
+        local = chunk
+        for attempt in range(5):
+            try:
+                supabase.table(table).upsert(local, on_conflict=conflict_cols).execute()
+                return
+            except Exception as exc:
+                m = _re.search(r"Could not find the '(\w+)' column", str(exc))
+                if m:
+                    col = m.group(1)
+                    stripped_cols.add(col)
+                    print(f"  ⚠  Schema cache missing '{col}' — stripping and retrying…")
+                    local = [{k: v for k, v in r.items() if k not in stripped_cols} for r in local]
+                else:
+                    raise
+
+    total = len(rows)
+    for i in range(0, total, BATCH_SIZE):
         chunk = rows[i:i+BATCH_SIZE]
-        supabase.table(table).upsert(chunk, on_conflict=conflict_cols).execute()
-        print(f"    — upserted {min(i+BATCH_SIZE, len(rows))}/{len(rows)}")
+        if stripped_cols:
+            chunk = [{k: v for k, v in r.items() if k not in stripped_cols} for r in chunk]
+        _upsert_chunk(chunk)
+        print(f"    — upserted {min(i+BATCH_SIZE, total)}/{total}", end="\r")
+    print()
+
 
 def market_days_between(start: date, end: date):
     """Yield all Mon-Fri dates between start and end inclusive."""
@@ -94,21 +123,23 @@ def market_days_between(start: date, end: date):
             yield cur
         cur += timedelta(days=1)
 
+
 def fetch_bhav_for_date(target: date):
     """
-    Try fetching bhavcopy for target date.
-    nselib uses DD-MM-YYYY format.
-    Returns (df, actual_date) or (None, None) if not available.
+    Fetch NSE EQ bhav copy for a specific date using bhav_copy_equities
+    (same API as the nightly job — confirmed working for historical dates).
+    Returns (df, target) or (None, None) on holiday / no-data.
     """
     date_str = target.strftime("%d-%m-%Y")
     for attempt in range(MAX_RETRIES):
         try:
-            df = capital_market.bhav_copy_with_delivery(date_str)
-            return df, target
+            df = capital_market.bhav_copy_equities(trade_date=date_str)
+            if df is not None and len(df) > 0:
+                return df, target
+            return None, None   # empty = holiday
         except Exception as e:
             msg = str(e).lower()
-            # Common holidays / no-data signals
-            if any(x in msg for x in ("no data", "404", "holiday", "no record")):
+            if any(x in msg for x in ("no data", "404", "holiday", "no record", "unavailable")):
                 return None, None
             if attempt < MAX_RETRIES - 1:
                 print(f"    retrying ({attempt+1}/{MAX_RETRIES}) — {e}")
