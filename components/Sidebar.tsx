@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Wallet, ArrowLeftRight, CalendarClock,
   BarChart3, Star, Layers, PanelLeftClose, PanelLeftOpen,
-  ChevronDown, ChevronRight, TrendingUp, Settings, Activity, Upload,
+  ChevronDown, ChevronRight, TrendingUp, Settings, Activity, Upload, HelpCircle,
 } from 'lucide-react'
 
 interface Portfolio { id: string; name: string }
@@ -49,6 +49,7 @@ const navItems = [
       { href: '/reports',    label: 'Reports',       icon: <BarChart3 size={15} />,   color: '#f97316' },
       { href: '/watchlists', label: 'Watchlists',    icon: <Star size={15} />,        color: '#ec4899' },
       { href: '/taxonomies', label: 'Segments',      icon: <Layers size={15} />,      color: '#6366f1' },
+      { href: '/help',       label: 'Help Centre',   icon: <HelpCircle size={15} />,  color: '#64748b' },
     ],
   },
 ]
@@ -150,7 +151,7 @@ export default function Sidebar() {
                 fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
                 letterSpacing: '0.1em', color: 'var(--color-text-muted)',
               }}>
-              <span>Portfolios</span>
+              <span>Asset Classes</span>
               {portOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             </div>
           )}
@@ -184,7 +185,7 @@ export default function Sidebar() {
               color: 'var(--color-text-muted)', textDecoration: 'none',
               borderRadius: 6, border: '1px dashed var(--color-border)',
               textAlign: 'center', marginTop: 4,
-            }}>+ Add Portfolio</Link>
+            }}>+ Add Asset Class</Link>
           )}
         </div>
 

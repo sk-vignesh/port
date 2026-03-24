@@ -18,10 +18,10 @@ export default async function PortfoliosPage() {
     <>
       <div className="page-header flex-between">
         <div>
-          <h1 className="page-title">Portfolios</h1>
-          <p className="page-subtitle">Securities depots with holdings and performance</p>
+          <h1 className="page-title">Asset Classes</h1>
+          <p className="page-subtitle">Your investment buckets — each with its own holdings and performance</p>
         </div>
-        <Link href="/portfolios/new" className="btn btn-primary">+ Add Portfolio</Link>
+        <Link href="/portfolios/new" className="btn btn-primary">+ New Asset Class</Link>
       </div>
 
       <div className="grid-2">
@@ -29,9 +29,9 @@ export default async function PortfoliosPage() {
           <div className="card" style={{ gridColumn: '1/-1' }}>
             <div className="empty-state">
               <div className="empty-state-icon">📊</div>
-              <div className="empty-state-title">No portfolios yet</div>
-              <div className="empty-state-text">Create a portfolio to track your security holdings.</div>
-              <Link href="/portfolios/new" className="btn btn-primary mt-4">Create Portfolio</Link>
+              <div className="empty-state-title">No asset classes yet</div>
+              <div className="empty-state-text">Create an asset class (Stocks, Bonds, Real Estate…) to track your holdings.</div>
+              <Link href="/portfolios/new" className="btn btn-primary mt-4">Create Asset Class</Link>
             </div>
           </div>
         ) : portfolios.map(p => (
