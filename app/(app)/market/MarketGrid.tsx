@@ -3,6 +3,7 @@
 import { useRef, useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AgGridReact } from 'ag-grid-react'
+import { createClient } from '@/lib/supabase/client'
 import type {
   ColDef, ValueGetterParams, ValueFormatterParams,
   ICellRendererParams, PaginationChangedEvent,
@@ -62,18 +63,26 @@ export default function MarketGrid({
   const [hasMore, setHasMore]   = useState(initialRows.length < initialTotal)
   const [search, setSearch]     = useState('')
 
-  // ── Fetch next chunk ──────────────────────────────────────────────────────
+  // ── Fetch next chunk — direct Supabase query (no /api/market-data route needed) ─
   const fetchNext = useCallback(async () => {
     if (loading || !hasMore) return
     setLoading(true)
     try {
-      const params = new URLSearchParams({
-        date: latestDate, start: String(offset), end: String(offset + CHUNK - 1),
-      })
-      const { rows: next, total } = await fetch(`/api/market-data?${params}`).then(r => r.json())
-      setRows(prev => [...prev, ...(next ?? [])])
-      setOffset(prev => prev + (next?.length ?? 0))
-      if (offset + (next?.length ?? 0) >= total) setHasMore(false)
+      const supabase = createClient()
+      const start = offset
+      const end   = offset + CHUNK - 1
+      const { data: next, count } = await supabase
+        .from('price_history')
+        .select('symbol, name, close, prev_close, open, high, low, volume', { count: 'exact' })
+        .eq('date', latestDate)
+        .order('index_priority', { ascending: true, nullsFirst: false })
+        .order('symbol', { ascending: true })
+        .range(start, end)
+
+      const fetched = next ?? []
+      setRows(prev => [...prev, ...fetched])
+      setOffset(prev => prev + fetched.length)
+      if (count !== null && offset + fetched.length >= count) setHasMore(false)
     } finally {
       setLoading(false)
     }
