@@ -11,15 +11,21 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  // First get security to know the ticker_symbol
+  const { data: security } = await supabase
+    .from('securities')
+    .select('*, security_latest_prices(*), security_events(*)')
+    .eq('id', id)
+    .single()
+
+  if (!security) notFound()
+
+  const ticker = (security.ticker_symbol as string | null)?.replace(/\.(NS|BO|BSE)$/i, '').toUpperCase() ?? null
+
   const [
-    { data: security },
     { data: txnsRaw },
+    { data: priceRows },
   ] = await Promise.all([
-    supabase
-      .from('securities')
-      .select('*, security_latest_prices(*), security_events(*), security_prices(date, value)')
-      .eq('id', id)
-      .single(),
     // All portfolio transactions for this security across all portfolios
     supabase
       .from('portfolio_transactions')
@@ -27,12 +33,22 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
       .eq('security_id', id)
       .in('portfolio_id', (await supabase.from('portfolios').select('id').eq('user_id', user.id)).data?.map(p => p.id) ?? [])
       .order('date', { ascending: false }),
+
+    // Historical prices from price_history via ticker_symbol (last 2 years)
+    ticker
+      ? supabase
+          .from('price_history')
+          .select('date, close')
+          .eq('symbol', ticker)
+          .gte('date', new Date(Date.now() - 2 * 365 * 864e5).toISOString().slice(0, 10))
+          .order('date', { ascending: true })
+          .limit(730)
+      : Promise.resolve({ data: [] }),
   ])
 
-  if (!security) notFound()
-
-  const prices = (security.security_prices as unknown as { date: string; value: number }[] ?? [])
-    .sort((a, b) => a.date.localeCompare(b.date))
+  // price_history stores actual ₹ values (not ×100), so use directly
+  const prices = (priceRows ?? [] as { date: string; close: number }[])
+    .map(p => ({ date: p.date, value: Number(p.close) }))
   const events = (security.security_events as unknown as { id: string; date: string; type: string; details: Record<string, unknown>; note?: string }[] ?? [])
     .sort((a, b) => b.date.localeCompare(a.date))
   const latest = security.security_latest_prices as unknown as {
@@ -44,15 +60,16 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
     : null
 
   // Compute 7d and 30d price change from history
-  const today = new Date().toISOString().slice(0, 10)
+  // latest.value is ×100 (security_latest_prices scale); price_history values are actual ₹
   const d7  = new Date(Date.now() - 7  * 864e5).toISOString().slice(0, 10)
   const d30 = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
   const closestBefore = (target: string) => prices.filter(p => p.date <= target).at(-1)
   const p7  = closestBefore(d7)
   const p30 = closestBefore(d30)
-  const curr = latest?.value ?? 0
-  const change7d  = p7  && curr ? ((curr - p7.value)  / p7.value)  * 100 : null
-  const change30d = p30 && curr ? ((curr - p30.value) / p30.value) * 100 : null
+  // Use the most recent price_history close as current if no security_latest_prices; else divide ×100
+  const currActual = latest ? latest.value / 100 : (prices.at(-1)?.value ?? 0)
+  const change7d  = p7  && currActual ? ((currActual - p7.value)  / p7.value)  * 100 : null
+  const change30d = p30 && currActual ? ((currActual - p30.value) / p30.value) * 100 : null
 
   const txns = (txnsRaw ?? []).map(t => ({
     id: t.id,
@@ -147,7 +164,7 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
       <SecurityDetailClient
         securityId={id}
         currency={security.currency_code}
-        prices={prices.map(p => ({ date: p.date, value: p.value / 100 }))}
+        prices={prices}
         transactions={txns}
         events={events}
       />
