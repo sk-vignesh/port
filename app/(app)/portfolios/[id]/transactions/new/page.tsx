@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput from '@/components/SecuritySearchInput'
@@ -26,22 +26,48 @@ const fmtNum = (n: number) =>
 
 export default function NewPortfolioTransactionPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedSecurity | null>(null)
   const [resolving, setResolving] = useState(false)
 
-  const [type, setType] = useState('BUY')
+  // Read URL params sent by Buy/Sell buttons on security detail pages
+  const urlType       = searchParams.get('type')
+  const urlSecurityId = searchParams.get('security_id')
+
+  const [type, setType] = useState(urlType && TX_TYPES.some(t => t.value === urlType) ? urlType : 'BUY')
   const [shares, setShares] = useState('')
   const [price, setPrice] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [note, setNote] = useState('')
 
-  const totalAmount = shares && price && +shares > 0 && +price > 0
-    ? +shares * +price : null
+  // Pre-fill security if security_id param present
+  useEffect(() => {
+    if (!urlSecurityId || selected) return
+    setResolving(true)
+    supabase
+      .from('securities')
+      .select('id, name, ticker_symbol, currency_code')
+      .eq('id', urlSecurityId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setSelected({
+            id: data.id,
+            name: data.name,
+            ticker: data.ticker_symbol ?? '',
+            currency: data.currency_code,
+          })
+        }
+        setResolving(false)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSecurityId])
 
   const activeType = TX_TYPES.find(t => t.value === type)!
+  const totalAmount = shares && price && +shares > 0 && +price > 0 ? +shares * +price : null
 
   const handleSelectStock = async (stock: IndianStock) => {
     setError(null)
