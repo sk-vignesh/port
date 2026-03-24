@@ -26,11 +26,12 @@ export default function AppGrid({
   showSearch = true,
 }: AppGridProps) {
   const gridRef  = useRef<AgGridReact>(null)
-  const [search, setSearch] = useState('')
+  const [search,         setSearch]         = useState('')
+  const [filtersEnabled, setFiltersEnabled] = useState(false)
 
   const defaultColDef: ColDef = {
     sortable: true,
-    filter: true,
+    filter: filtersEnabled,   // hidden by default; shown when toggled on
     resizable: true,
     minWidth: 80,
   }
@@ -62,6 +63,13 @@ export default function AppGrid({
     e.api.deselectAll()
   }, [])
 
+  // When turning filters off, also clear any active filters
+  const toggleFilters = useCallback(() => {
+    const next = !filtersEnabled
+    setFiltersEnabled(next)
+    if (!next) gridRef.current?.api.setFilterModel(null)
+  }, [filtersEnabled])
+
   return (
     <div>
       {/* Toolbar */}
@@ -86,6 +94,31 @@ export default function AppGrid({
           {rowData.length} {rowData.length !== 1 ? 'records' : 'record'}
         </span>
         <div style={{ flex: 1 }} />
+
+        {/* Filter toggle */}
+        <button
+          onClick={toggleFilters}
+          title={filtersEnabled ? 'Hide column filters' : 'Show column filters'}
+          style={{
+            padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
+            fontSize: '0.75rem', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 5,
+            fontFamily: 'Montserrat, sans-serif',
+            border: filtersEnabled
+              ? '1px solid var(--color-accent-light)'
+              : '1px solid var(--color-border)',
+            background: filtersEnabled
+              ? 'var(--color-accent-glow, rgba(59,130,246,0.12))'
+              : 'var(--color-bg-elevated)',
+            color: filtersEnabled
+              ? 'var(--color-accent-light)'
+              : 'var(--color-text-muted)',
+            transition: 'all 0.15s',
+          }}
+        >
+          ⚡ Filters {filtersEnabled ? 'on' : 'off'}
+        </button>
+
         <button onClick={exportToExcel} style={{
           padding: '5px 14px', borderRadius: 6,
           border: '1px solid var(--color-border)',
