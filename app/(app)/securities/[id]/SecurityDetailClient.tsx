@@ -125,42 +125,38 @@ export default function SecurityDetailClient({ securityId, currency, prices, tra
         </div>
       )}
 
-      {/* ── Transaction history ── */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Transaction History</span></div>
-        <div style={{ padding: '0 4px 12px' }}>
-          {transactions.length === 0 ? (
-            <div className="empty-state" style={{ padding: 32 }}>
-              <div className="empty-state-text">No trades recorded for this security</div>
-            </div>
-          ) : (
-            <AppGrid rowData={transactions} columnDefs={txCols} exportFilename="transactions" height={320} />
-          )}
+      {/* ── Transaction History + Price History — side by side ── */}
+      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+
+        {/* Transaction History — 50% */}
+        <div className="card" style={{ flex: 1, minWidth: 0 }}>
+          <div className="card-header"><span className="card-title">Transaction History</span></div>
+          <div style={{ padding: '0 4px 12px' }}>
+            {transactions.length === 0 ? (
+              <div className="empty-state" style={{ padding: 32 }}>
+                <div className="empty-state-text">No trades recorded for this security</div>
+              </div>
+            ) : (
+              <AppGrid rowData={transactions} columnDefs={txCols} exportFilename="transactions" height={380} />
+            )}
+          </div>
         </div>
+
+        {/* Price History — 50% */}
+        {prices.length > 0 && (
+          <div className="card" style={{ flex: 1, minWidth: 0 }}>
+            <div className="card-header">
+              <span className="card-title">Price History</span>
+              <a href={`/securities/${securityId}/prices`} style={{ fontSize: '0.78rem', color: 'var(--color-accent-light)' }}>Manage →</a>
+            </div>
+            <div style={{ padding: '0 4px 12px' }}>
+              <AppGrid rowData={[...prices].reverse()} columnDefs={priceCols} exportFilename="price_history" height={380} />
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* ── Events ── */}
-      {events.length > 0 && (
-        <div className="card">
-          <div className="card-header"><span className="card-title">Corporate Events</span></div>
-          <div style={{ padding: '0 4px 12px' }}>
-            <AppGrid rowData={events} columnDefs={eventCols} exportFilename="events" height={220} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Full price history ── */}
-      {prices.length > 0 && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Price History</span>
-            <a href={`/securities/${securityId}/prices`} style={{ fontSize: '0.78rem', color: 'var(--color-accent-light)' }}>Manage →</a>
-          </div>
-          <div style={{ padding: '0 4px 12px' }}>
-            <AppGrid rowData={[...prices].reverse()} columnDefs={priceCols} exportFilename="price_history" height={320} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
