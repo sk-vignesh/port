@@ -18,12 +18,12 @@ export default async function TransactionsPage() {
 
   const [{ data: acctTxns }, { data: portTxns }] = await Promise.all([
     supabase.from('account_transactions')
-      .select('*, accounts(name), securities(name)')
+      .select('*, accounts(name), securities(id, name)')
       .in('account_id', (accounts ?? []).map(a => a.id))
       .order('date', { ascending: false })
       .limit(500),
     supabase.from('portfolio_transactions')
-      .select('*, portfolios(name), securities(name)')
+      .select('*, portfolios(name), securities(id, name)')
       .in('portfolio_id', (portfolios ?? []).map(p => p.id))
       .order('date', { ascending: false })
       .limit(500),
@@ -36,7 +36,8 @@ export default async function TransactionsPage() {
       kind:             'account' as const,
       type:             t.type,
       type_label:       ACCOUNT_TX_LABELS[t.type] ?? t.type,
-      security_name:    (t.securities as unknown as { name: string } | null)?.name ?? null,
+      security_id:      (t.securities as unknown as { id: string; name: string } | null)?.id ?? null,
+      security_name:    (t.securities as unknown as { id: string; name: string } | null)?.name ?? null,
       account_portfolio:(t.accounts  as unknown as { name: string } | null)?.name ?? null,
       shares:           null,
       amount:           t.amount,
@@ -47,7 +48,8 @@ export default async function TransactionsPage() {
       kind:             'portfolio' as const,
       type:             t.type,
       type_label:       PORTFOLIO_TX_LABELS[t.type] ?? t.type,
-      security_name:    (t.securities as unknown as { name: string } | null)?.name ?? null,
+      security_id:      (t.securities as unknown as { id: string; name: string } | null)?.id ?? null,
+      security_name:    (t.securities as unknown as { id: string; name: string } | null)?.name ?? null,
       account_portfolio:(t.portfolios as unknown as { name: string } | null)?.name ?? null,
       shares:           t.shares ? t.shares / 100_000_000 : null,
       amount:           t.amount,

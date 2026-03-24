@@ -1,6 +1,7 @@
 'use client'
+import Link from 'next/link'
 import dynamicImport from 'next/dynamic'
-import type { ColDef, ValueFormatterParams } from 'ag-grid-community'
+import type { ColDef, ValueFormatterParams, ICellRendererParams } from 'ag-grid-community'
 import { formatDate } from '@/lib/format'
 
 const AppGrid = dynamicImport(() => import('@/components/AppGrid'), { ssr: false })
@@ -10,7 +11,9 @@ const fmtINR = (v: number) =>
 
 export interface TxRow {
   id: string; date: string; kind: 'account' | 'portfolio'
-  type: string; type_label: string; security_name: string | null
+  type: string; type_label: string
+  security_id: string | null
+  security_name: string | null
   account_portfolio: string | null; shares: number | null; amount: number
 }
 
@@ -27,6 +30,21 @@ const TYPE_COLOR = (type: string) => {
   return 'var(--color-text-secondary)'
 }
 
+function SecCellRenderer(p: ICellRendererParams) {
+  const row = p.data as TxRow
+  if (!row?.security_name) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+  if (!row?.security_id)   return <span>{row.security_name}</span>
+  return (
+    <Link
+      href={`/securities/${row.security_id}`}
+      style={{ color: 'var(--color-accent-light)', textDecoration: 'none' }}
+      prefetch={false}
+    >
+      {row.security_name}
+    </Link>
+  )
+}
+
 const colDefs: ColDef[] = [
   {
     field: 'date', headerName: 'Date', width: 120,
@@ -41,7 +59,10 @@ const colDefs: ColDef[] = [
     field: 'type_label', headerName: 'Type', width: 130,
     cellStyle: (p) => ({ color: TYPE_COLOR((p.data as TxRow)?.type ?? ''), fontWeight: 500 }),
   },
-  { field: 'security_name', headerName: 'Security', flex: 1, minWidth: 140 },
+  {
+    field: 'security_name', headerName: 'Security', flex: 1, minWidth: 140,
+    cellRenderer: SecCellRenderer,
+  },
   { field: 'account_portfolio', headerName: 'Account / Portfolio', flex: 1, minWidth: 140, cellStyle: { color: 'var(--color-text-muted)' } },
   {
     field: 'shares', headerName: 'Shares', type: 'numericColumn', width: 100,

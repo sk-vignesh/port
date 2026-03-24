@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { formatAmount } from '@/lib/format'
 
@@ -237,7 +238,15 @@ export default function GainsPage() {
                   <tr key={row.securityId}>
                     {/* Security name + ticker */}
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.83rem' }}>{row.name}</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.83rem' }}>
+                        <Link
+                          href={`/securities/${row.securityId}`}
+                          style={{ color: 'var(--color-accent-light)', textDecoration: 'none' }}
+                          prefetch={false}
+                        >
+                          {row.name}
+                        </Link>
+                      </div>
                       {row.ticker && (
                         <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
                           {row.ticker}

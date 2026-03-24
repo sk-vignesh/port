@@ -262,11 +262,14 @@ const BROKER_GUIDES: BrokerGuide[] = [
 ]
 
 interface Portfolio { id: string; name: string }
+interface Account   { id: string; name: string; currency_code: string }
 
 export default function ImportPage() {
-  const [portfolios,  setPortfolios]  = useState<Portfolio[]>([])
-  const [portfolioId, setPortfolioId] = useState('')
-  const [trades,      setTrades]      = useState<ParsedTrade[]>([])
+  const [portfolios,   setPortfolios]  = useState<Portfolio[]>([])
+  const [portfolioId,  setPortfolioId] = useState('')
+  const [accounts,     setAccounts]    = useState<Account[]>([])
+  const [accountId,    setAccountId]   = useState('')    // '' = auto-create for broker
+  const [trades,       setTrades]      = useState<ParsedTrade[]>([])
   const [broker,      setBroker]      = useState('unknown')
   const [parseError,  setParseError]  = useState<string | null>(null)
   const [fileName,    setFileName]    = useState<string | null>(null)
@@ -277,8 +280,14 @@ export default function ImportPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    createClient().from('portfolios').select('id, name').eq('is_retired', false).order('name')
-      .then(({ data }) => { if (data?.length) { setPortfolios(data); setPortfolioId(data[0].id) } })
+    const sb = createClient()
+    Promise.all([
+      sb.from('portfolios').select('id, name').eq('is_retired', false).order('name'),
+      sb.from('accounts').select('id, name, currency_code').eq('is_retired', false).order('name'),
+    ]).then(([{ data: ports }, { data: accts }]) => {
+      if (ports?.length) { setPortfolios(ports); setPortfolioId(ports[0].id) }
+      if (accts?.length)   setAccounts(accts)
+    })
   }, [])
 
   const handleFile = useCallback(async (file: File) => {
@@ -293,12 +302,43 @@ export default function ImportPage() {
     const file = e.dataTransfer.files[0]; if (file) handleFile(file)
   }, [handleFile])
 
+  // When broker changes, pre-select an account matching the broker name if one exists
+  useEffect(() => {
+    if (broker === 'unknown') return
+    const match = accounts.find(a => a.name.toLowerCase().includes(broker.toLowerCase()))
+    setAccountId(match?.id ?? '')  // '' = will auto-create
+  }, [broker, accounts])
+
   const doImport = async () => {
     if (!portfolioId || trades.length === 0) return
     setImporting(true); setResult(null)
+
+    // Resolve or create account
+    let resolvedAccountId = accountId
+    if (!resolvedAccountId && broker !== 'unknown') {
+      const brokerLabel = BROKER_BADGE[broker]?.label ?? broker
+      const sb = createClient()
+      const { data: { user } } = await sb.auth.getUser()
+      const userId = user?.id
+      if (!userId) { setImporting(false); return }
+      // Try to find by name first (race-safety)
+      const { data: existing } = await sb.from('accounts')
+        .select('id').ilike('name', brokerLabel).eq('user_id', userId).maybeSingle()
+      if (existing) {
+        resolvedAccountId = existing.id
+      } else {
+        const { data: created } = await sb.from('accounts').insert({
+          name: brokerLabel, currency_code: 'INR', is_retired: false, user_id: userId,
+        }).select('id').single()
+        resolvedAccountId = created?.id ?? ''
+        if (created) setAccounts(prev => [...prev, { id: created.id, name: brokerLabel, currency_code: 'INR' }])
+      }
+      setAccountId(resolvedAccountId)
+    }
+
     const res = await fetch('/api/import/zerodha', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ portfolio_id: portfolioId, trades }),
+      body: JSON.stringify({ portfolio_id: portfolioId, account_id: resolvedAccountId || undefined, trades }),
     })
     setResult(await res.json()); setImporting(false)
   }
@@ -421,9 +461,29 @@ export default function ImportPage() {
                         {badge.label}
                       </span>
                     </div>
-                    <select className="form-input" value={portfolioId} onChange={e => setPortfolioId(e.target.value)}>
-                      {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+
+                    {/* Row: Portfolio + Account selectors */}
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 180px' }}>
+                        <label style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Portfolio</label>
+                        <select className="form-input" value={portfolioId} onChange={e => setPortfolioId(e.target.value)}>
+                          {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: '1 1 180px' }}>
+                        <label style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Account</label>
+                        <select
+                          className="form-input"
+                          value={accountId}
+                          onChange={e => setAccountId(e.target.value)}
+                        >
+                          <option value="">
+                            ✨ Auto-create &quot;{BROKER_BADGE[broker]?.label ?? broker}&quot; account
+                          </option>
+                          {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <button onClick={doImport} className="btn btn-primary" disabled={importing || !portfolioId} style={{ minWidth: 160 }}>

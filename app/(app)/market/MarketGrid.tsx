@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useCallback, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { AgGridReact } from 'ag-grid-react'
 import type {
   ColDef, ValueGetterParams, ValueFormatterParams,
@@ -108,7 +109,15 @@ export default function MarketGrid({
   const colDefs: ColDef[] = useMemo((): ColDef[] => [
     {
       field: 'symbol', headerName: 'Symbol', pinned: 'left', width: 110,
-      cellStyle: { color: 'var(--color-accent-light)' },
+      cellRenderer: (p: ICellRendererParams) => (
+        <Link
+          href={`/securities?q=${encodeURIComponent(p.value as string)}`}
+          style={{ color: 'var(--color-accent-light)', textDecoration: 'none', fontWeight: 600 }}
+          prefetch={false}
+        >
+          {p.value as string}
+        </Link>
+      ),
     },
     {
       field: 'name', headerName: 'Company', width: 240, minWidth: 160,
