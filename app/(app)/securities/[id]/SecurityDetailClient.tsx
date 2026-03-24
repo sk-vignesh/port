@@ -128,8 +128,8 @@ export default function SecurityDetailClient({ securityId, currency, prices, tra
       {/* ── Transaction History + Price History — side by side ── */}
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
 
-        {/* Transaction History — 50% */}
-        <div className="card" style={{ flex: 1, minWidth: 0 }}>
+        {/* Transaction History — 66% */}
+        <div className="card" style={{ flex: 2, minWidth: 0 }}>
           <div className="card-header"><span className="card-title">Transaction History</span></div>
           <div style={{ padding: '0 4px 12px' }}>
             {transactions.length === 0 ? (
