@@ -102,6 +102,10 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
     ? (latest.value / 100 - avgBuyPrice) * netShares
     : null
 
+  // Local formatter for values already in actual ₹ (not ×100 stored scale)
+  const fmtINR = (v: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: security.currency_code, maximumFractionDigits: 2 }).format(v)
+
   return (
     <>
       {/* Header */}
@@ -123,7 +127,8 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
           {latest && (
             <div className="text-right">
               <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>
-                {formatAmount(latest.value / 100, security.currency_code)}
+                {/* latest.value is stored ×100 — formatAmount handles the ÷100 */}
+                {formatAmount(latest.value, security.currency_code)}
               </div>
               {change !== null && (
                 <div className={`text-sm font-mono ${change >= 0 ? 'amount-positive' : 'amount-negative'}`}>
@@ -144,14 +149,14 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
       {/* KPI cards */}
       <div className="grid-4 mb-6">
         {[
-          { label: 'Current Price',  value: latest ? formatAmount(latest.value / 100, security.currency_code) : '—' },
+          { label: 'Current Price',  value: latest ? formatAmount(latest.value, security.currency_code) : '—' },
           { label: 'Today',          value: change     !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`     : '—', cls: change     !== null ? (change >= 0 ? 'amount-positive' : 'amount-negative') : '' },
           { label: '1 Week',         value: change7d   !== null ? `${change7d >= 0 ? '+' : ''}${change7d.toFixed(2)}%`   : '—', cls: change7d   !== null ? (change7d >= 0 ? 'amount-positive' : 'amount-negative') : '' },
           { label: '1 Month',        value: change30d  !== null ? `${change30d >= 0 ? '+' : ''}${change30d.toFixed(2)}%`  : '—', cls: change30d  !== null ? (change30d >= 0 ? 'amount-positive' : 'amount-negative') : '' },
           { label: 'Net Holding',    value: netShares > 0 ? `${Math.round(netShares)} shares` : '—' },
-          { label: 'Current Value',  value: currentValue !== null ? formatAmount(currentValue, security.currency_code) : '—' },
-          { label: 'Avg Buy Price',  value: avgBuyPrice !== null ? formatAmount(avgBuyPrice, security.currency_code) : '—' },
-          { label: 'Unrealised P&L', value: unrealisedPl !== null ? formatAmount(unrealisedPl, security.currency_code) : '—', cls: unrealisedPl !== null ? (unrealisedPl >= 0 ? 'amount-positive' : 'amount-negative') : '' },
+          { label: 'Current Value',  value: currentValue !== null ? fmtINR(currentValue) : '—' },
+          { label: 'Avg Buy Price',  value: avgBuyPrice !== null ? fmtINR(avgBuyPrice) : '—' },
+          { label: 'Unrealised P&L', value: unrealisedPl !== null ? fmtINR(unrealisedPl) : '—', cls: unrealisedPl !== null ? (unrealisedPl >= 0 ? 'amount-positive' : 'amount-negative') : '' },
         ].map(m => (
           <div key={m.label} className="metric-card">
             <div className="metric-label">{m.label}</div>
