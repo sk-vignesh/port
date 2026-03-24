@@ -150,7 +150,7 @@ export default function SecurityDetailClient({ securityId, currency, prices, tra
               <a href={`/securities/${securityId}/prices`} style={{ fontSize: '0.78rem', color: 'var(--color-accent-light)' }}>Manage →</a>
             </div>
             <div style={{ padding: '0 4px 12px' }}>
-              <AppGrid rowData={[...prices].reverse()} columnDefs={priceCols} exportFilename="price_history" height={380} />
+              <AppGrid rowData={[...prices].reverse()} columnDefs={priceCols} exportFilename="price_history" height={380} showSearch={false} />
             </div>
           </div>
         )}
