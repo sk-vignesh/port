@@ -139,6 +139,20 @@ export default async function SecurityDetailPage({ params }: { params: { id: str
             </div>
           )}
           <div className="flex flex-gap-2">
+            <Link
+              href={`/transactions/new?security_id=${id}&type=BUY`}
+              className="btn btn-sm"
+              style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)', border: '1px solid rgba(34,197,94,0.35)', fontWeight: 700 }}
+            >
+              ↑ Buy
+            </Link>
+            <Link
+              href={`/transactions/new?security_id=${id}&type=SELL`}
+              className="btn btn-sm"
+              style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.3)', fontWeight: 700 }}
+            >
+              ↓ Sell
+            </Link>
             <Link href={`/securities/${id}/events/new`} className="btn btn-secondary btn-sm">+ Event</Link>
             <Link href={`/securities/${id}/prices`} className="btn btn-secondary btn-sm">Prices</Link>
             <Link href={`/securities/${id}/edit`} className="btn btn-secondary">Edit</Link>

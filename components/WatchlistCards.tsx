@@ -123,21 +123,22 @@ function SecurityCard({ item, watchlistId }: { item: WatchlistSecurityItem; watc
 
   return (
     <div style={{
-      padding: '12px 16px', borderRadius: 10,
+      padding: '16px 18px', borderRadius: 10,
       background: 'var(--color-surface)', border: '1px solid var(--color-border)',
-      display: 'flex', flexDirection: 'column', gap: 6,
+      display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center',
+      textAlign: 'center',
       transition: 'border-color 0.15s',
     }}>
       {/* Row 1: name + alert toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, width: '100%' }}>
         <Link href={`/securities/${item.id}`}
-          style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--color-accent-light)', textDecoration: 'none' }}>
+          style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-accent-light)', textDecoration: 'none', flex: 1, textAlign: 'left' }}>
           {item.name}
         </Link>
         <button onClick={() => setShowForm(v => !v)}
           title={alert ? 'Edit alert' : 'Set alert'}
           style={{
-            padding: '3px 10px', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600,
+            padding: '4px 12px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
             border: `1px solid ${alert?.is_active ? '#f59e0b60' : 'var(--color-border)'}`,
             background: alert?.is_active ? '#f59e0b10' : 'transparent',
             color: alert?.is_active ? '#f59e0b' : 'var(--color-text-muted)',
@@ -149,10 +150,10 @@ function SecurityCard({ item, watchlistId }: { item: WatchlistSecurityItem; watc
 
       {/* Row 2: existing alert badge */}
       {alert?.is_active && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
           <AlertBadge alert={alert} />
           {alert.note && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', alignSelf: 'center' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', alignSelf: 'center' }}>
               {alert.note}
             </span>
           )}
