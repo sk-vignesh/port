@@ -15,6 +15,44 @@ export async function POST(req: Request) {
   if (!portfolio_id || !Array.isArray(trades) || trades.length === 0)
     return NextResponse.json({ error: 'portfolio_id and trades[] required' }, { status: 400 })
 
+  // ── Server-side validation ────────────────────────────────────────────────────
+  const TODAY = new Date().toISOString().slice(0, 10)
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+  const validationErrors: string[] = []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const validTrades = trades.filter((t: any, idx: number) => {
+    const sym   = String(t.symbol ?? '').trim().toUpperCase()
+    const date  = String(t.date ?? '').trim()
+    const type  = String(t.type ?? '').trim().toLowerCase()
+    const qty   = Number(t.qty)
+    const price = Number(t.price)
+
+    const issues: string[] = []
+    if (!sym)                       issues.push('missing symbol')
+    if (!DATE_RE.test(date))        issues.push(`invalid date "${date}"`)
+    else if (date > TODAY)          issues.push(`future date ${date}`)
+    if (!isFinite(qty)  || qty  <= 0) issues.push(`invalid qty ${qty}`)
+    if (!isFinite(price)|| price <= 0) issues.push(`invalid price ${price}`)
+    if (!['buy','sell'].includes(type)) issues.push(`unknown type "${type}"`)
+
+    if (issues.length > 0) {
+      validationErrors.push(`Row ${idx + 1} (${sym || '?'}): ${issues.join(', ')}`)
+      return false
+    }
+    return true
+  })
+
+  if (validTrades.length === 0) {
+    return NextResponse.json({
+      imported: 0, skipped: 0, new_securities: 0,
+      errors: [`All ${trades.length} rows failed validation`, ...validationErrors.slice(0, 10)],
+    }, { status: 422 })
+  }
+
+  // Use validTrades for the rest of the pipeline (silently drops invalid rows)
+  const pipelineTrades = validTrades
+
   // Verify portfolio belongs to user
   const { data: port } = await supabase.from('portfolios').select('id')
     .eq('id', portfolio_id).eq('user_id', user.id).maybeSingle()
@@ -24,8 +62,10 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const secIdMap = new Map<string, string>()  // isin OR uppercase-ticker → id
 
-  const allIsins   = [...new Set(trades.map((t: any) => t.isin).filter(Boolean))] as string[]
-  const allSymbols = [...new Set(trades.map((t: any) => (t.symbol as string).toUpperCase()))]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allIsins   = [...new Set(pipelineTrades.map((t: any) => t.isin).filter(Boolean))] as string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allSymbols = [...new Set(pipelineTrades.map((t: any) => (t.symbol as string).toUpperCase()))]
 
   if (allIsins.length) {
     const { data } = await supabase.from('securities').select('id, isin, ticker_symbol')
@@ -44,7 +84,7 @@ export async function POST(req: Request) {
 
   // ── Step 2: Batch-create missing securities ────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const needCreate = trades.filter((t: any) => {
+  const needCreate = pipelineTrades.filter((t: any) => {
     const sym = (t.symbol as string).toUpperCase()
     return !secIdMap.has(sym) && !secIdMap.has(t.isin)
   })
@@ -67,7 +107,7 @@ export async function POST(req: Request) {
 
   // ── Step 3: Idempotency — bulk check existing notes ───────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const idemKeys: string[] = trades.map((t: any) =>
+  const idemKeys: string[] = pipelineTrades.map((t: any) =>
     `zerodha:csv:${t.trade_id || `${t.symbol}-${t.date}-${t.type}-${t.qty}`}`)
 
   const { data: alreadyIn } = await supabase.from('portfolio_transactions').select('note')
@@ -77,13 +117,14 @@ export async function POST(req: Request) {
 
   // ── Step 4: Batch insert ───────────────────────────────────────────────────
   const toInsert: object[] = []
-  const errors: string[] = []
+  const errors: string[] = [...validationErrors.slice(0, 5)]
+  if (validationErrors.length > 5) errors.push(`...and ${validationErrors.length - 5} more validation issues`)
   let skipped = 0
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (let i = 0; i < trades.length; i++) {
+  for (let i = 0; i < pipelineTrades.length; i++) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const t    = trades[i] as any
+    const t    = pipelineTrades[i] as any
     const idem = idemKeys[i]
     if (existingKeys.has(idem)) { skipped++; continue }
 
@@ -111,5 +152,9 @@ export async function POST(req: Request) {
     else imported += chunk.length
   }
 
-  return NextResponse.json({ imported, skipped, new_securities: newSecs, errors })
+  return NextResponse.json({
+    imported, skipped, new_securities: newSecs,
+    validation_dropped: trades.length - validTrades.length,
+    errors,
+  })
 }

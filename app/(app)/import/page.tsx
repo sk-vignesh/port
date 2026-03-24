@@ -13,6 +13,9 @@ interface ParsedTrade {
   symbol: string; isin: string; date: string; type: string
   qty: number; price: number; trade_id: string; exchange: string
 }
+type Severity = 'ok' | 'warn' | 'error'
+interface TradeIssue { severity: Severity; message: string }
+type ValidatedTrade = ParsedTrade & { _issues: TradeIssue[]; _severity: Severity }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function parseDate(raw: string): string {
@@ -195,19 +198,97 @@ function readFile(file: File): Promise<{ trades: ParsedTrade[]; broker: string; 
 
 // ── Grid columns ──────────────────────────────────────────────────────────────
 const INR = (v: number) => `₹${v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const COLS = [
-  { field: 'symbol', headerName: 'Symbol', width: 120, cellRenderer: (p: {value:string}) => <b>{p.value}</b> },
-  { field: 'type', headerName: 'Type', width: 75,
-    cellRenderer: (p: {value:string}) => <span style={{ color: p.value==='buy'?'var(--color-success)':'var(--color-danger)', fontWeight:600, textTransform:'uppercase' }}>{p.value}</span> },
-  { field: 'date', headerName: 'Date', width: 105 },
-  { field: 'qty', headerName: 'Qty', width: 75, type: 'numericColumn' },
-  { field: 'price', headerName: 'Price', width: 110, type: 'numericColumn', valueFormatter: (p:{value:number}) => INR(p.value) },
-  { field: 'amount', headerName: 'Amount', width: 120, type: 'numericColumn',
-    valueGetter: (p:{data:ParsedTrade}) => p.data.qty * p.data.price,
-    valueFormatter: (p:{value:number}) => INR(p.value) },
-  { field: 'exchange', headerName: 'Exch', width: 70 },
-  { field: 'isin', headerName: 'ISIN', width: 140, cellStyle: { color:'var(--color-text-muted)', fontSize:'0.78rem' } },
-]
+
+const SEV_COLOR: Record<Severity, string> = {
+  ok:    'var(--color-success)',
+  warn:  '#f59e0b',
+  error: 'var(--color-danger)',
+}
+const SEV_ICON: Record<Severity, string> = { ok: '✓', warn: '⚠', error: '✗' }
+
+
+const TODAY_ISO = new Date().toISOString().slice(0, 10)
+
+function validateTrade(t: ParsedTrade): TradeIssue[] {
+  const issues: TradeIssue[] = []
+  if (!t.symbol || t.symbol === 'UNKNOWN')
+    issues.push({ severity: 'error', message: 'Missing symbol' })
+  else if (/^\d+$/.test(t.symbol))
+    issues.push({ severity: 'warn', message: 'Symbol looks like a number — check column mapping' })
+  else if (t.symbol.length > 20)
+    issues.push({ severity: 'warn', message: 'Symbol unusually long' })
+
+  if (!t.date || !/^\d{4}-\d{2}-\d{2}$/.test(t.date))
+    issues.push({ severity: 'error', message: `Unparseable date: "${t.date}"` })
+  else if (t.date > TODAY_ISO)
+    issues.push({ severity: 'warn', message: `Future date: ${t.date}` })
+  else if (t.date < '2000-01-01')
+    issues.push({ severity: 'warn', message: `Suspiciously old date: ${t.date}` })
+
+  if (!isFinite(t.qty) || t.qty <= 0)
+    issues.push({ severity: 'error', message: `Invalid quantity: ${t.qty}` })
+
+  if (!isFinite(t.price) || t.price <= 0)
+    issues.push({ severity: 'error', message: `Invalid price: ${t.price}` })
+  else if (t.price > 1_000_000)
+    issues.push({ severity: 'warn', message: `Very high price ₹${t.price} — commas/formatting issue?` })
+
+  if (!['buy','sell'].includes(t.type))
+    issues.push({ severity: 'error', message: `Unknown type: "${t.type}"` })
+
+  return issues
+}
+
+function worstSeverity(issues: TradeIssue[]): Severity {
+  if (issues.some(i => i.severity === 'error')) return 'error'
+  if (issues.some(i => i.severity === 'warn'))  return 'warn'
+  return 'ok'
+}
+
+function downloadCustomTemplate() {
+  const csv = [
+    'symbol,date,type,quantity,price,isin,exchange',
+    'RELIANCE,2025-01-15,buy,10,2850.50,INE002A01018,NSE',
+    'HDFCBANK,2025-02-01,buy,5,1620.00,INE040A01034,NSE',
+    'TCS,2025-03-10,sell,3,3900.00,INE467B01029,NSE',
+  ].join('\n')
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = 'portfolio_import_template.csv'; a.click()
+}
+
+function buildCols(trades: ValidatedTrade[]) {
+  const hasIssues = trades.some(t => t._severity !== 'ok')
+  const cols = [
+    ...(hasIssues ? [{
+      field: '_severity', headerName: 'Status', width: 72, pinned: 'left' as const,
+      cellRenderer: (p: { data: ValidatedTrade }) => {
+        const sev = p.data._severity
+        const msgs = p.data._issues.map(i => i.message).join(' · ')
+        return (
+          <span title={msgs || 'OK'} style={{ color: SEV_COLOR[sev], fontWeight: 700, cursor: msgs ? 'help' : 'default' }}>
+            {SEV_ICON[sev]}
+          </span>
+        )
+      },
+    }] : []),
+    { field: 'symbol',   headerName: 'Symbol', width: 120,
+      cellRenderer: (p: { data: ValidatedTrade; value: string }) => (
+        <b style={{ color: p.data._severity === 'error' ? 'var(--color-danger)' : undefined }}>{p.value}</b>
+      ) },
+    { field: 'type',     headerName: 'Type',  width: 75,
+      cellRenderer: (p: { value: string }) => <span style={{ color: p.value==='buy'?'var(--color-success)':'var(--color-danger)', fontWeight:600, textTransform:'uppercase' }}>{p.value}</span> },
+    { field: 'date',     headerName: 'Date',   width: 105 },
+    { field: 'qty',      headerName: 'Qty',    width: 75,  type: 'numericColumn' },
+    { field: 'price',    headerName: 'Price',  width: 110, type: 'numericColumn', valueFormatter: (p:{value:number}) => INR(p.value) },
+    { field: 'amount',   headerName: 'Amount', width: 120, type: 'numericColumn',
+      valueGetter: (p:{data:ParsedTrade}) => p.data.qty * p.data.price,
+      valueFormatter: (p:{value:number}) => INR(p.value) },
+    { field: 'exchange', headerName: 'Exch',   width: 70 },
+    { field: 'isin',     headerName: 'ISIN',   width: 140, cellStyle: { color:'var(--color-text-muted)', fontSize:'0.78rem' } },
+  ]
+  return cols
+}
 
 const BROKER_BADGE: Record<string, { label: string; color: string }> = {
   zerodha:  { label: 'Zerodha',    color: '#7c3aed' },
@@ -259,6 +340,15 @@ const BROKER_GUIDES: BrokerGuide[] = [
   { id: '5paisa',   name: '5paisa',     format: 'CSV',      color: '#0284c7',
     href: 'https://www.5paisa.com',
     steps: ['Login to 5paisa.com', 'Go to My Account → Reports → Trade Book', 'Choose date range and Equity', 'Click Download'] },
+  { id: 'custom',   name: 'Custom / Other', format: 'CSV', color: '#8b5cf6',
+    href: '#',
+    steps: [
+      'Download the template CSV: click the "Download Template" button below',
+      'Required columns: symbol, date (YYYY-MM-DD), type (buy/sell), quantity, price',
+      'Optional: isin, exchange (NSE/BSE/default NSE)',
+      'One row per trade — do not include totals or empty rows',
+      'Save as CSV (.csv) and upload',
+    ] },
 ]
 
 interface Portfolio { id: string; name: string }
@@ -269,7 +359,7 @@ export default function ImportPage() {
   const [portfolioId,  setPortfolioId] = useState('')
   const [accounts,     setAccounts]    = useState<Account[]>([])
   const [accountId,    setAccountId]   = useState('')    // '' = auto-create for broker
-  const [trades,       setTrades]      = useState<ParsedTrade[]>([])
+  const [trades,       setTrades]      = useState<ValidatedTrade[]>([])
   const [broker,      setBroker]      = useState('unknown')
   const [parseError,  setParseError]  = useState<string | null>(null)
   const [fileName,    setFileName]    = useState<string | null>(null)
@@ -293,8 +383,14 @@ export default function ImportPage() {
   const handleFile = useCallback(async (file: File) => {
     setFileName(file.name); setParseError(null); setTrades([]); setResult(null); setBroker('unknown')
     const { trades: parsed, broker: detected, error } = await readFile(file)
-    if (error) setParseError(error)
-    else { setTrades(parsed); setBroker(detected) }
+    if (error) { setParseError(error); return }
+    // Attach per-trade validation
+    const validated: ValidatedTrade[] = parsed.map(t => {
+      const issues = validateTrade(t)
+      return { ...t, _issues: issues, _severity: worstSeverity(issues) }
+    })
+    setTrades(validated)
+    setBroker(detected)
   }, [])
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -410,8 +506,22 @@ export default function ImportPage() {
                           <li key={i} style={{ fontSize: '0.79rem', color: 'var(--color-text)', lineHeight: 1.5 }}>{step}</li>
                         ))}
                       </ol>
-                      <div style={{ marginTop: 8, fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                        File format: <strong style={{ color: 'var(--color-text)' }}>{guide.format}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                          File format: <strong style={{ color: 'var(--color-text)' }}>{guide.format}</strong>
+                        </div>
+                        {guide.id === 'custom' && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); downloadCustomTemplate() }}
+                            style={{
+                              padding: '3px 10px', borderRadius: 6, cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600,
+                              border: `1px solid ${guide.color}`, background: `${guide.color}18`, color: guide.color,
+                            }}
+                          >
+                            ↓ Download Template CSV
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -485,8 +595,36 @@ export default function ImportPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Validation summary */}
+                  {(() => {
+                    const errs  = trades.filter(t => t._severity === 'error').length
+                    const warns = trades.filter(t => t._severity === 'warn').length
+                    const ok    = trades.length - errs - warns
+                    if (errs === 0 && warns === 0) return null
+                    return (
+                      <div style={{
+                        padding: '8px 12px', borderRadius: 8, fontSize: '0.78rem',
+                        background: errs > 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+                        border: `1px solid ${errs > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                        display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap',
+                      }}>
+                        {errs > 0 && <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>✗ {errs} error{errs !== 1 ? 's' : ''}</span>}
+                        {warns > 0 && <span style={{ color: '#f59e0b', fontWeight: 600 }}>⚠ {warns} warning{warns !== 1 ? 's' : ''}</span>}
+                        {ok > 0    && <span style={{ color: 'var(--color-success)' }}>✓ {ok} valid</span>}
+                        <span style={{ color: 'var(--color-text-muted)' }}>
+                          {errs > 0 ? 'Fix errors before importing. Hover ✗ in preview to see details.' : 'Warnings won’t block import but should be reviewed.'}
+                        </span>
+                      </div>
+                    )
+                  })()}
+
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <button onClick={doImport} className="btn btn-primary" disabled={importing || !portfolioId} style={{ minWidth: 160 }}>
+                    <button onClick={doImport} className="btn btn-primary"
+                      disabled={importing || !portfolioId || trades.some(t => t._severity === 'error')}
+                      style={{ minWidth: 160 }}
+                      title={trades.some(t => t._severity === 'error') ? 'Fix validation errors first' : undefined}
+                    >
                       {importing ? '⏳ Importing…' : `⬆ Import ${trades.length} trades`}
                     </button>
                     <button onClick={reset} className="btn btn-secondary" title="Cancel"><X size={15} /></button>
@@ -498,7 +636,7 @@ export default function ImportPage() {
             <div className="card" style={{ overflow: 'hidden' }}>
               <div className="card-header"><span className="card-title text-muted" style={{ fontSize: '0.8rem' }}>Preview</span></div>
               <div style={{ height: Math.min(trades.length * 41 + 48, 360) }}>
-                <AppGrid rowData={trades} columnDefs={COLS} showSearch={false} />
+                <AppGrid rowData={trades} columnDefs={buildCols(trades)} showSearch={false} />
               </div>
             </div>
           </>
