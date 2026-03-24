@@ -177,8 +177,8 @@ def main():
             print(f"ERROR: expected column '{col}' not found. Got: {list(df.columns)}")
             sys.exit(1)
 
-    # ── 2. Bulk-save ALL rows to nse_market_data ──────────────────────────────
-    print("Saving full bhav copy to nse_market_data...")
+    # ── 2. Bulk-save ALL rows to price_history ───────────────────────────────
+    print("Saving full bhav copy to price_history...")
     market_rows = []
     for _, row in df.iterrows():
         sym = str(row.get(COL_SYMBOL, "")).strip().upper()
@@ -189,17 +189,17 @@ def main():
             "symbol":         sym,
             "date":           price_date,
             "name":           str(row.get(COL_NAME, "") or "").strip() or None,
-            "close_price":    close,
+            "close":          close,
             "prev_close":     to_float(row.get(COL_PREV)),
-            "open_price":     to_float(row.get(COL_OPEN)),
-            "high_price":     to_float(row.get(COL_HIGH)),
-            "low_price":      to_float(row.get(COL_LOW)),
+            "open":           to_float(row.get(COL_OPEN)),
+            "high":           to_float(row.get(COL_HIGH)),
+            "low":            to_float(row.get(COL_LOW)),
             "volume":         int(to_float(row.get(COL_VOL)) or 0) or None,
             "isin":           str(row.get(COL_ISIN, "") or "").strip() or None,
             "index_priority": index_priority(sym),
         })
 
-    batch_upsert(supabase, "nse_market_data", market_rows, "symbol,date")
+    batch_upsert(supabase, "price_history", market_rows, "symbol,date")
     print(f"  ✓ {len(market_rows)} NSE EQ records saved for {price_date}\n")
 
     # Build fast symbol lookup for step 3

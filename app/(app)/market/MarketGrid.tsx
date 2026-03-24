@@ -16,14 +16,14 @@ const CHUNK      = 500   // rows fetched per network request
 const PAGE_SIZE  = 100   // rows per grid page
 
 export interface MarketRow {
-  symbol:      string
-  name:        string | null
-  close_price: number
-  prev_close:  number | null
-  open_price:  number | null
-  high_price:  number | null
-  low_price:   number | null
-  volume:      number | null
+  symbol:     string
+  name:       string | null
+  close:      number
+  prev_close: number | null
+  open:       number | null
+  high:       number | null
+  low:        number | null
+  volume:     number | null
 }
 
 const fmtINR = (v: number | null | undefined) =>
@@ -120,29 +120,29 @@ export default function MarketGrid({
       cellStyle: { color: 'var(--color-text-muted)' },
     },
     {
-      field: 'open_price', headerName: 'Open', type: 'numericColumn', width: 140,
+      field: 'open', headerName: 'Open', type: 'numericColumn', width: 140,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-text-muted)' },
     },
     {
-      field: 'high_price', headerName: 'High', type: 'numericColumn', width: 140,
+      field: 'high', headerName: 'High', type: 'numericColumn', width: 140,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-success)' },
     },
     {
-      field: 'low_price', headerName: 'Low', type: 'numericColumn', width: 140,
+      field: 'low', headerName: 'Low', type: 'numericColumn', width: 140,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
       cellStyle: { color: 'var(--color-danger)' },
     },
     {
-      field: 'close_price', headerName: 'Close', type: 'numericColumn', width: 140,
+      field: 'close', headerName: 'Close', type: 'numericColumn', width: 140,
       valueFormatter: (p: ValueFormatterParams) => fmtINR(p.value),
     },
     {
       colId: 'chg', headerName: 'Change', type: 'numericColumn', width: 130, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
         const r = p.data as MarketRow
-        return r?.close_price != null && r?.prev_close != null ? r.close_price - r.prev_close : null
+        return r?.close != null && r?.prev_close != null ? r.close - r.prev_close : null
       },
       valueFormatter: (p: ValueFormatterParams) => p.value != null ? (p.value >= 0 ? '+' : '') + fmtINR(p.value) : '—',
       cellRenderer: ChangeAmtRenderer,
@@ -151,8 +151,8 @@ export default function MarketGrid({
       colId: 'pct', headerName: '% Change', type: 'numericColumn', width: 110, sortable: false,
       valueGetter: (p: ValueGetterParams) => {
         const r = p.data as MarketRow
-        if (!r?.close_price || !r?.prev_close) return null
-        return ((r.close_price - r.prev_close) / r.prev_close) * 100
+        if (!r?.close || !r?.prev_close) return null
+        return ((r.close - r.prev_close) / r.prev_close) * 100
       },
       cellRenderer: ChangeCellRenderer,
     },

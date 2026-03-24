@@ -13,7 +13,7 @@ export default async function MarketPage() {
 
   // Latest trading date — uses only stable columns, no schema-cache risk
   const { data: dateRow } = await supabase
-    .from('nse_market_data')
+    .from('price_history')
     .select('date')
     .order('date', { ascending: false })
     .limit(1)
@@ -48,17 +48,17 @@ export default async function MarketPage() {
   let errMsg: string | null = null
 
   const attempts = [
-    // 1. Full columns + Nifty priority ordering (ideal)
-    () => supabase.from('nse_market_data')
-      .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+    // 1. All columns + Nifty priority ordering (ideal)
+    () => supabase.from('price_history')
+      .select('symbol, name, close, prev_close, open, high, low, volume', { count: 'exact' })
       .eq('date', latestDate).order('index_priority', { ascending: true, nullsFirst: false }).order('symbol', { ascending: true }).range(0, 499),
-    // 2. Full columns + symbol ordering (index_priority not cached)
-    () => supabase.from('nse_market_data')
-      .select('symbol, name, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+    // 2. All columns + symbol ordering (index_priority not cached)
+    () => supabase.from('price_history')
+      .select('symbol, name, close, prev_close, open, high, low, volume', { count: 'exact' })
       .eq('date', latestDate).order('symbol', { ascending: true }).range(0, 499),
-    // 3. Core columns only + symbol ordering (name also not cached)
-    () => supabase.from('nse_market_data')
-      .select('symbol, close_price, prev_close, open_price, high_price, low_price, volume', { count: 'exact' })
+    // 3. Core columns only (name also not cached)
+    () => supabase.from('price_history')
+      .select('symbol, close, prev_close, open, high, low, volume', { count: 'exact' })
       .eq('date', latestDate).order('symbol', { ascending: true }).range(0, 499),
   ]
 

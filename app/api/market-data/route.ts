@@ -2,17 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
-// Columns the client is allowed to sort by (must match DB column names)
-const SORTABLE = new Set(['symbol', 'close_price', 'prev_close', 'open_price', 'high_price', 'low_price', 'volume'])
-const SELECT = 'symbol, name, close_price, prev_close, open_price, high_price, low_price, volume'
+// Columns the client is allowed to sort by (must match price_history column names)
+const SORTABLE = new Set(['symbol', 'close', 'prev_close', 'open', 'high', 'low', 'volume'])
+const SELECT   = 'symbol, name, close, prev_close, open, high, low, volume'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
 
   const date    = searchParams.get('date') ?? ''
-  const start   = parseInt(searchParams.get('start') ?? '0', 10)
+  const start   = parseInt(searchParams.get('start') ?? '0',  10)
   const end     = parseInt(searchParams.get('end')   ?? '99', 10)
-  const search  = searchParams.get('search') ?? ''
+  const search  = searchParams.get('search')  ?? ''
   const sortCol = searchParams.get('sortCol') ?? ''
   const sortDir = searchParams.get('sortDir') === 'desc' ? false : true
 
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
   const buildQuery = (useIndexPriority: boolean) => {
     let q = supabase
-      .from('nse_market_data')
+      .from('price_history')
       .select(SELECT, { count: 'exact' })
       .eq('date', date)
       .range(start, end)
@@ -36,14 +36,14 @@ export async function GET(req: Request) {
     }
 
     if (search.trim()) {
-      q = q.ilike('symbol', `%${search.trim()}%`)
+      q = q.or(`symbol.ilike.%${search.trim()}%,name.ilike.%${search.trim()}%`)
     }
     return q
   }
 
   let { data, count, error } = await buildQuery(true)
 
-  // Schema cache fallback — if index_priority not yet known, retry without it
+  // Fallback without index_priority ordering if column not yet in schema cache
   if (error?.message?.includes('index_priority')) {
     const r2 = await buildQuery(false)
     data = r2.data; count = r2.count; error = r2.error
