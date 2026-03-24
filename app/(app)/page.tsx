@@ -5,6 +5,7 @@ import { formatAmount, formatDate } from '@/lib/format'
 import { buildHoldings } from '@/lib/performance'
 import SampleDataBanner from '@/components/SampleDataBanner'
 import DashboardCharts from '@/components/DashboardCharts'
+import MyIndexChart from '@/components/MyIndexChart'
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
@@ -152,8 +153,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Charts row */}
-      {(priceChartData.length > 1 || allocData.length > 0 || pnlData.length > 0) && (
+      {/* Your Personal Index Chart */}
+      <div className="mb-6">
+        <MyIndexChart currency={baseCurrency} />
+      </div>
+
+      {/* Allocation / P&L Charts row */}
+      {(allocData.length > 0 || pnlData.length > 0) && (
         <DashboardCharts
           priceHistory={priceChartData}
           allocation={allocData}
