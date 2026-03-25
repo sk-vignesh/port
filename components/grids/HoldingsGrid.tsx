@@ -36,7 +36,7 @@ const colDefs: ColDef<HoldingRow>[] = [
   },
   {
     field: 'shares',
-    headerName: 'Shares',
+    headerName: 'Units',
     type: 'rightAligned',
     flex: 1,
     minWidth: 90,
