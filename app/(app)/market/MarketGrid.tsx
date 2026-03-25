@@ -14,6 +14,52 @@ import { appGridTheme } from '@/lib/agGridTheme'
 
 ModuleRegistry.registerModules([AllCommunityModule])
 
+function WatchlistCellRenderer({ data }: ICellRendererParams) {
+  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const row = data as MarketRow | undefined
+  if (!row?.symbol) return null
+
+  const add = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setState('loading')
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setState('error'); return }
+      // Find or create a security matching this symbol
+      const { data: sec } = await supabase
+        .from('securities')
+        .select('id')
+        .eq('ticker_symbol', row.symbol)
+        .maybeSingle()
+      if (!sec) { setState('error'); return }
+      const { data: lists } = await supabase
+        .from('watchlists')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+      if (!lists) { setState('error'); return }
+      await supabase.from('watchlist_securities')
+        .upsert({ watchlist_id: lists.id, security_id: sec.id }, { onConflict: 'watchlist_id,security_id' })
+      setState('done')
+    } catch { setState('error') }
+  }
+
+  if (state === 'done') return <span style={{ color: 'var(--color-success)', fontSize: '0.78rem', fontWeight: 600 }}>✓ Watching</span>
+  if (state === 'error') return <span style={{ color: 'var(--color-danger)', fontSize: '0.78rem' }}>—</span>
+  return (
+    <button onClick={add} disabled={state === 'loading'} style={{
+      padding: '3px 10px', borderRadius: 6, border: '1px solid var(--color-border)',
+      background: 'var(--color-bg-elevated)', cursor: 'pointer',
+      fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text-muted)',
+      opacity: state === 'loading' ? 0.6 : 1,
+    }}>
+      {state === 'loading' ? '…' : '⭐ Watch'}
+    </button>
+  )
+}
+
 const CHUNK      = 500   // rows fetched per network request
 const PAGE_SIZE  = 100   // rows per grid page
 
@@ -179,6 +225,10 @@ export default function MarketGrid({
       valueFormatter: (p: ValueFormatterParams) =>
         p.value != null ? (p.value as number).toLocaleString('en-IN') : '—',
       cellStyle: { color: 'var(--color-text-muted)' },
+    },
+    {
+      colId: 'watchlist', headerName: '', width: 110, sortable: false, filter: false, resizable: false,
+      cellRenderer: WatchlistCellRenderer,
     },
   ], [])
 

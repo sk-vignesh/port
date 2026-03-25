@@ -33,6 +33,9 @@ export default async function DashboardPage() {
   const portfolioIds = portfolioList.map(p => p.id)
   const accountIds   = (accounts ?? []).map(a => a.id)
 
+  // New users with no data → guided onboarding
+  if (!portfolioList.length && !accountIds.length) redirect('/onboard')
+
   const [
     { data: recentPortTxn },
     { data: allPortTxns },

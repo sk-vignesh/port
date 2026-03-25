@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import QuickTradeButton from '@/components/QuickTradeButton'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -17,7 +18,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="page-container">
           {children}
         </div>
+        <QuickTradeButton />
       </main>
     </div>
   )
 }
+

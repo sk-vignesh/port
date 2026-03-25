@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { formatAmount } from '@/lib/format'
+import Tooltip from '@/components/Tooltip'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface GainRow {
@@ -168,7 +169,7 @@ export default function GainsPage() {
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">Unrealised Gain</div>
+            <div className="metric-label">Unrealised Gain <Tooltip content="Profit or loss on positions you still hold, based on the latest market price vs what you paid." /></div>
             <div className="metric-value" style={{ fontSize: '1.35rem', color: gainColor(summary.totalUnrealized) }}>
               {summary.totalUnrealized >= 0 ? '+' : ''}{formatAmount(summary.totalUnrealized, currency)}
             </div>
@@ -178,7 +179,7 @@ export default function GainsPage() {
           </div>
 
           <div className="metric-card">
-            <div className="metric-label">Realised Gain</div>
+            <div className="metric-label">Realised Gain <Tooltip content="Profit or loss you have already locked in by selling. This counts toward your actual tax liability." /></div>
             <div className="metric-value" style={{ fontSize: '1.35rem', color: gainColor(summary.totalRealized) }}>
               {summary.totalRealized >= 0 ? '+' : ''}{formatAmount(summary.totalRealized, currency)}
             </div>
@@ -224,8 +225,8 @@ export default function GainsPage() {
                   <SortTh colKey="name"             label="Security" />
                   <SortTh colKey="shares"           label="Qty"            right />
                   <SortTh colKey="costBasis"        label="Invested"       right />
-                  <th className="table-right" style={{ whiteSpace: 'nowrap' }}>Avg Cost</th>
-                  <th className="table-right" style={{ whiteSpace: 'nowrap' }}>CMP</th>
+                  <th className="table-right" style={{ whiteSpace: 'nowrap' }}>Avg Cost <Tooltip content="Average price you paid per unit, weighted by all your buy transactions." /></th>
+                  <th className="table-right" style={{ whiteSpace: 'nowrap' }}>CMP <Tooltip content="Current Market Price — the latest available price for this security." /></th>
                   <SortTh colKey="currentValue"     label="Mkt Value"      right />
                   <SortTh colKey="unrealizedGain"   label="Unreal. Gain"   right />
                   <SortTh colKey="unrealizedGainPct"label="Unreal. %"      right />
