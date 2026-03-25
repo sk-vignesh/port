@@ -199,7 +199,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           }} />
           <img
             src="/onboarding/features.png"
-            alt="Arjun explaining features"
+            alt="Guide explaining features"
             style={{
               width: 110, height: 140, objectFit: 'cover', objectPosition: 'top',
               borderRadius: 18,
@@ -207,14 +207,6 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               display: 'block',
             }}
           />
-          <div style={{
-            position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(139,92,246,0.4)',
-            borderRadius: 20, padding: '3px 10px', fontSize: '0.65rem', fontWeight: 700,
-            color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap',
-          }}>
-            Arjun
-          </div>
         </div>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 6 }}>Here's what you get</h2>
@@ -459,23 +451,15 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         }} />
         <img
           src="/onboarding/done.png"
-          alt="Priya celebrating your first investment!"
+          alt="Celebrating your investment journey"
           style={{
-            width: 200, height: 240, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 24,
-            boxShadow: '0 20px 60px rgba(34,197,94,0.25), 0 4px 16px rgba(0,0,0,0.5)',
+            width: 260, height: 310, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 28,
+            boxShadow: '0 24px 70px rgba(34,197,94,0.3), 0 4px 20px rgba(0,0,0,0.5)',
             animation: 'floatY 4s ease-in-out infinite',
             display: 'block',
           }}
         />
-        <div style={{
-          position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(34,197,94,0.4)',
-          borderRadius: 20, padding: '5px 14px', fontSize: '0.72rem', fontWeight: 700,
-          color: '#86efac', whiteSpace: 'nowrap',
-        }}>
-          🎉 You did it!
-        </div>
       </div>
       <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 10 }}>You&apos;re all set!</h2>
       {casResult && (
