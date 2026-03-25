@@ -7,6 +7,7 @@ import SampleDataBanner from '@/components/SampleDataBanner'
 import DashboardCharts from '@/components/DashboardCharts'
 import MyIndexChart from '@/components/MyIndexChart'
 import { ASSET_CLASS_ICONS } from '@/lib/assetClasses'
+import DashboardTradeButton from '@/components/DashboardTradeButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -133,10 +134,11 @@ export default async function DashboardPage() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
+          <DashboardTradeButton />
           {hasData ? (
             <>
-              <Link href="/portfolios" className="btn btn-secondary">View Asset Classes</Link>
-              <Link href="/holdings" className="btn btn-primary">All Holdings</Link>
+              <Link href="/portfolios" className="btn btn-secondary">Asset Classes</Link>
+              <Link href="/holdings" className="btn btn-primary">Holdings</Link>
             </>
           ) : (
             <>

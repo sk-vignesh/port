@@ -1,18 +1,23 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
-import NSE_STOCKS, { type IndianStock } from '@/lib/indian-stocks'
+import { useState, useRef, useEffect } from 'react'
+
+export interface SearchResult {
+  symbol:    string
+  name:      string
+  sector?:   string
+  exchange?: string   // e.g. "NSE", "BSE", "NMS"
+  currency?: string   // e.g. "INR", "USD"
+  type?:     string   // e.g. "EQUITY", "ETF", "MUTUALFUND"
+}
 
 interface Props {
-  onSelect: (stock: IndianStock) => void
+  onSelect: (result: SearchResult) => void
   placeholder?: string
 }
 
-/** Simple multi-word fuzzy match — every word in query must appear in name or symbol */
-function matches(stock: IndianStock, query: string): boolean {
-  const haystack = `${stock.name} ${stock.symbol} ${stock.sector}`.toLowerCase()
-  return query.toLowerCase().split(/\s+/).every(word => haystack.includes(word))
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const ANON_KEY    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 const SECTOR_COLORS: Record<string, string> = {
   'IT':            '#3b82f6',
@@ -36,18 +41,30 @@ const SECTOR_COLORS: Record<string, string> = {
   'Electronics':   '#06b6d4',
 }
 
-function sectorDot(sector: string) {
-  const color = SECTOR_COLORS[sector] ?? '#94a3b8'
-  return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 1 }} />
+function sectorDot(sector?: string) {
+  const color = (sector && SECTOR_COLORS[sector]) ?? '#94a3b8'
+  return (
+    <span style={{
+      display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+      background: color, flexShrink: 0, marginTop: 1,
+    }} />
+  )
 }
 
-export default function SecuritySearchInput({ onSelect, placeholder = 'Search: Reliance, TCS, HDFC Bank, Nifty BeES…' }: Props) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
+export default function SecuritySearchInput({
+  onSelect,
+  placeholder = 'Search: Reliance, TCS, HDFC Bank, Nifty BeES…',
+}: Props) {
+  const [query,     setQuery]     = useState('')
+  const [results,   setResults]   = useState<SearchResult[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(false)
+  const [open,      setOpen]      = useState(false)
   const [activeIdx, setActiveIdx] = useState(0)
+
   const containerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const inputRef     = useRef<HTMLInputElement>(null)
+  const listRef      = useRef<HTMLDivElement>(null)
 
   // Close on outside click
   useEffect(() => {
@@ -58,17 +75,51 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Instant local search — no debounce needed
-  const results = useMemo<IndianStock[]>(() => {
-    const q = query.trim()
-    if (q.length < 1) return []
-    return NSE_STOCKS.filter(s => matches(s, q)).slice(0, 9)
-  }, [query])
-
+  // Debounced live search
   useEffect(() => {
-    setOpen(results.length > 0)
-    setActiveIdx(0)
-  }, [results])
+    const q = query.trim()
+    if (q.length < 2) { setResults([]); setOpen(false); setError(false); return }
+
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      setError(false)
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/price-search?q=${encodeURIComponent(q)}`,
+          { headers: { apikey: ANON_KEY } }
+        )
+        if (res.ok) {
+          const raw: Array<{
+            symbol: string; name: string; exchange?: string;
+            currency?: string; type?: string
+          }> = await res.json()
+          setResults(
+            Array.isArray(raw)
+              ? raw.slice(0, 9).map(d => ({
+                  symbol:   d.symbol,
+                  name:     d.name,
+                  exchange: d.exchange,
+                  currency: d.currency,
+                  type:     d.type,
+                }))
+              : []
+          )
+          setOpen(true)
+          setActiveIdx(0)
+        } else {
+          setError(true)
+          setResults([])
+        }
+      } catch {
+        setError(true)
+        setResults([])
+      } finally {
+        setLoading(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [query])
 
   // Scroll active item into view
   useEffect(() => {
@@ -76,19 +127,21 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
     el?.scrollIntoView({ block: 'nearest' })
   }, [activeIdx])
 
-  const handleSelect = (stock: IndianStock) => {
+  const handleSelect = (result: SearchResult) => {
     setQuery('')
     setOpen(false)
-    onSelect(stock)
+    onSelect(result)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open) return
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, results.length - 1)) }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)) }
-    else if (e.key === 'Enter' && results[activeIdx]) { e.preventDefault(); handleSelect(results[activeIdx]) }
-    else if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur() }
+    if (e.key === 'ArrowDown')                           { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, results.length - 1)) }
+    else if (e.key === 'ArrowUp')                        { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' && results[activeIdx])    { e.preventDefault(); handleSelect(results[activeIdx]) }
+    else if (e.key === 'Escape')                         { setOpen(false); inputRef.current?.blur() }
   }
+
+  const showDropdown = open && (loading || error || results.length > 0)
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -103,7 +156,7 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
           className="form-input"
           style={{ paddingLeft: 36 }}
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => { setQuery(e.target.value); if (e.target.value.trim().length >= 2) setOpen(true) }}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
@@ -111,14 +164,19 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
           spellCheck={false}
         />
         {query && (
-          <button type="button" onClick={() => { setQuery(''); setOpen(false); inputRef.current?.focus() }}
-            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}>
-            ×
-          </button>
+          <button
+            type="button"
+            onClick={() => { setQuery(''); setOpen(false); setResults([]); inputRef.current?.focus() }}
+            style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: 'var(--color-text-muted)',
+              cursor: 'pointer', fontSize: '1rem', lineHeight: 1,
+            }}
+          >×</button>
         )}
       </div>
 
-      {open && results.length > 0 && (
+      {showDropdown && (
         <div
           ref={listRef}
           style={{
@@ -132,14 +190,31 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
             overflowY: 'auto',
           }}
         >
-          <div style={{ padding: '6px 12px 4px', fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)' }}>
-            NSE · INR · {results.length} result{results.length !== 1 ? 's' : ''}
+          {/* Header */}
+          <div style={{
+            padding: '6px 12px 4px', fontSize: '0.68rem', fontWeight: 600,
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+            color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {loading ? (
+              <>
+                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', border: '2px solid var(--color-accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+                Searching…
+              </>
+            ) : error ? (
+              'Search unavailable'
+            ) : (
+              `${results.length} result${results.length !== 1 ? 's' : ''}`
+            )}
           </div>
-          {results.map((stock, i) => (
+
+          {/* Results */}
+          {!loading && !error && results.map((result, i) => (
             <button
-              key={stock.symbol}
+              key={result.symbol}
               type="button"
-              onClick={() => handleSelect(stock)}
+              onClick={() => handleSelect(result)}
               onMouseEnter={() => setActiveIdx(i)}
               style={{
                 width: '100%', textAlign: 'left',
@@ -153,23 +228,39 @@ export default function SecuritySearchInput({ onSelect, placeholder = 'Search: R
               }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {stock.name}
+                <div style={{
+                  fontWeight: 600, fontSize: '0.875rem',
+                  color: 'var(--color-text-primary)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {result.name}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <code style={{ fontSize: '0.7rem', color: 'var(--color-accent-light)' }}>{stock.symbol}</code>
-                  <span>·</span>
-                  {sectorDot(stock.sector)}
-                  <span>{stock.sector}</span>
+                <div style={{
+                  fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  <code style={{ fontSize: '0.7rem', color: 'var(--color-accent-light)' }}>{result.symbol}</code>
+                  {result.sector && (
+                    <>
+                      <span>·</span>
+                      {sectorDot(result.sector)}
+                      <span>{result.sector}</span>
+                    </>
+                  )}
                 </div>
               </div>
-              <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 'var(--radius-sm)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', flexShrink: 0, fontWeight: 600 }}>
-                INR
-              </span>
+              <span style={{
+                fontSize: '0.68rem', padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                background: 'rgba(59,130,246,0.1)', color: '#60a5fa',
+                flexShrink: 0, fontWeight: 600,
+              }}>{result.exchange ?? result.currency ?? 'NSE'}</span>
             </button>
           ))}
         </div>
       )}
+
+      {/* Spinner keyframe — scoped to this component */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }
