@@ -188,47 +188,43 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     </div>,
 
     // Slide 1 — Features
-    <div key="features" style={{ width: '100%' }}>
-      {/* Character + heading row — large side-by-side */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginBottom: 24 }}>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{
-            position: 'absolute', inset: 0, margin: '5%', borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)',
-            filter: 'blur(16px)',
-          }} />
-          <img
-            src="/onboarding/features.png"
-            alt="Guide explaining features"
-            style={{
-              width: 110, height: 140, objectFit: 'cover', objectPosition: 'top',
-              borderRadius: 18,
-              boxShadow: '0 12px 40px rgba(139,92,246,0.35), 0 4px 12px rgba(0,0,0,0.4)',
-              display: 'block',
-            }}
-          />
-        </div>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 6 }}>Here's what you get</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6 }}>
-            Built for Indian investors who want to see real returns, not just paper gains
-          </p>
-        </div>
+    <div key="features" style={{ width: '100%', textAlign: 'center' }}>
+      {/* Hero portrait — large and centered */}
+      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
+        <div style={{
+          position: 'absolute', inset: 0, margin: '10%',
+          background: 'radial-gradient(circle, rgba(139,92,246,0.45) 0%, transparent 70%)',
+          filter: 'blur(24px)',
+        }} />
+        <img
+          src="/onboarding/features.png"
+          alt="Your complete investment toolkit"
+          style={{
+            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 28,
+            boxShadow: '0 24px 70px rgba(139,92,246,0.35), 0 4px 20px rgba(0,0,0,0.5)',
+            display: 'block',
+          }}
+        />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
+      <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 6 }}>Your complete toolkit</h2>
+      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: 18, lineHeight: 1.5 }}>
+        Built for Indian investors who want real returns, not just paper gains
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20, textAlign: 'left' }}>
         {[
-          { icon: '📈', title: 'True Returns (XIRR)', body: 'Accounts for when you invested each rupee — not just simple % gain' },
-          { icon: '🗂', title: 'Every Asset Class', body: 'Stocks, MFs, Gold, FDs, Real Estate — one unified view' },
-          { icon: '🔔', title: 'Price Alerts', body: 'Set buy / sell target prices on your watchlist and get notified' },
-          { icon: '📋', title: 'Gains & Tax', body: 'Realised vs unrealised, LTCG vs STCG — ready for ITR season' },
+          { icon: '📈', title: 'True Returns (XIRR)', body: 'Accounts for when you invested each rupee' },
+          { icon: '🗂', title: 'Every Asset Class', body: 'Stocks, MFs, Gold, FDs, Real Estate' },
+          { icon: '🔔', title: 'Price Alerts', body: 'Buy / sell targets on your watchlist' },
+          { icon: '📋', title: 'Gains & Tax', body: 'LTCG vs STCG — ready for ITR season' },
         ].map(f => (
           <div key={f.title} style={{
             background: 'rgba(255,255,255,0.07)', borderRadius: 14,
-            border: '1px solid rgba(255,255,255,0.12)', padding: '16px 14px',
+            border: '1px solid rgba(255,255,255,0.12)', padding: '14px 12px',
           }}>
-            <div style={{ fontSize: '1.6rem', marginBottom: 8 }}>{f.icon}</div>
-            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 4 }}>{f.title}</div>
-            <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{f.body}</div>
+            <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{f.icon}</div>
+            <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: 3 }}>{f.title}</div>
+            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>{f.body}</div>
           </div>
         ))}
       </div>
@@ -239,40 +235,57 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     </div>,
 
     // Slide 2 — Choose path
-    <div key="choose" style={{ width: '100%' }}>
-      <h2 style={{ fontSize: '1.3rem', fontWeight: 800, textAlign: 'center', marginBottom: 6 }}>Get your data in</h2>
-      <p style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontSize: '0.88rem', marginBottom: 24 }}>
-        Choose how you'd like to start
+    <div key="choose" style={{ width: '100%', textAlign: 'center' }}>
+      {/* Hero portrait */}
+      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
+        <div style={{
+          position: 'absolute', inset: 0, margin: '10%',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+          filter: 'blur(24px)',
+        }} />
+        <img
+          src="/onboarding/choose.png"
+          alt="How would you like to get started?"
+          style={{
+            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 28,
+            boxShadow: '0 24px 70px rgba(99,102,241,0.3), 0 4px 20px rgba(0,0,0,0.5)',
+            display: 'block',
+          }}
+        />
+      </div>
+      <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 6 }}>How would you like to start?</h2>
+      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 18 }}>
+        Pick the fastest path for you
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18, textAlign: 'left' }}>
         {[
           {
             id: 'cas' as Path, icon: '📂',
             title: 'CAS Statement (Mutual Funds)',
-            desc: 'Upload your CAMS / KFintech CAS PDF — auto-imports all your MF holdings and transaction history',
+            desc: 'Upload your CAMS / KFintech PDF — imports everything automatically',
           },
           {
             id: 'csv' as Path, icon: '📤',
             title: 'Upload Trade CSV',
-            desc: 'Import a trade history CSV from Kuvera, Groww, Zerodha, or any broker',
+            desc: 'From Kuvera, Groww, Zerodha or any broker',
           },
           {
             id: 'manual' as Path, icon: '✏️',
-            title: 'Add Manually',
-            desc: 'Type in your first holding right now — takes 30 seconds',
+            title: 'Add a Holding Manually',
+            desc: 'Type in your first stock — takes 30 seconds',
           },
         ].map(opt => (
           <button key={opt.id} onClick={() => { setPath(opt.id); setSlide(3) }} style={{
             display: 'flex', alignItems: 'flex-start', gap: 14,
-            padding: '16px 18px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
+            padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
             background: 'rgba(255,255,255,0.07)', cursor: 'pointer', textAlign: 'left',
-            transition: 'background 0.15s, border-color 0.15s',
             color: 'white',
           }}>
-            <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>{opt.icon}</span>
+            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{opt.icon}</span>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 4 }}>{opt.title}</div>
-              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{opt.desc}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 3 }}>{opt.title}</div>
+              <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>{opt.desc}</div>
             </div>
           </button>
         ))}
@@ -284,10 +297,32 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     <div key="path" style={{ width: '100%' }}>
       {path === 'manual' && (
         <>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 6 }}>✏️ Add your first holding</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 20 }}>
-            We'll add it to your default Stocks portfolio automatically.
-          </p>
+          {/* Guide image beside heading */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+                filter: 'blur(14px)',
+              }} />
+              <img
+                src="/onboarding/manual.png"
+                alt="Add your first holding"
+                style={{
+                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
+                  borderRadius: 18,
+                  boxShadow: '0 12px 40px rgba(99,102,241,0.3), 0 4px 12px rgba(0,0,0,0.4)',
+                  display: 'block',
+                }}
+              />
+            </div>
+            <div style={{ paddingTop: 4 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>✏️ Add your first holding</h2>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                We'll add it to your default Stocks portfolio automatically — no setup needed.
+              </p>
+            </div>
+          </div>
 
           {/* Stock search — uses SecuritySearchInput with dark-theme overrides */}
           <style>{`
@@ -382,15 +417,37 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
       {path === 'cas' && (
         <>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 6 }}>📂 Upload CAS PDF</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 20, lineHeight: 1.6 }}>
-            Download your CAS from{' '}
-            <a href="https://www.mfcentral.com" target="_blank" rel="noreferrer" style={{ color: '#818cf8' }}>mfcentral.com</a>
-            {' '}or from your CAMS / KFintech inbox.
-          </p>
+          {/* Guide image beside heading */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+                filter: 'blur(14px)',
+              }} />
+              <img
+                src="/onboarding/choose.png"
+                alt="Upload your CAS PDF"
+                style={{
+                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
+                  borderRadius: 18,
+                  boxShadow: '0 12px 40px rgba(99,102,241,0.3), 0 4px 12px rgba(0,0,0,0.4)',
+                  display: 'block',
+                }}
+              />
+            </div>
+            <div style={{ paddingTop: 4 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>📂 Upload CAS PDF</h2>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                Download from{' '}
+                <a href="https://www.mfcentral.com" target="_blank" rel="noreferrer" style={{ color: '#818cf8' }}>mfcentral.com</a>
+                {' '}or from your CAMS / KFintech inbox.
+              </p>
+            </div>
+          </div>
           <label style={{
             display: 'block', border: '2px dashed rgba(255,255,255,0.2)',
-            borderRadius: 12, padding: '24px', textAlign: 'center', cursor: 'pointer',
+            borderRadius: 12, padding: '20px', textAlign: 'center', cursor: 'pointer',
             marginBottom: 14, transition: 'border-color 0.15s',
           }}>
             <input type="file" accept=".pdf" style={{ display: 'none' }}
@@ -418,15 +475,37 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
       {path === 'csv' && (
         <>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 6 }}>📤 Import Trade CSV</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 20 }}>
-            We&apos;ll mark your setup complete and take you to the import page.
-          </p>
+          {/* Guide image beside heading */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+                filter: 'blur(14px)',
+              }} />
+              <img
+                src="/onboarding/features.png"
+                alt="Import your trade CSV"
+                style={{
+                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
+                  borderRadius: 18,
+                  boxShadow: '0 12px 40px rgba(139,92,246,0.3), 0 4px 12px rgba(0,0,0,0.4)',
+                  display: 'block',
+                }}
+              />
+            </div>
+            <div style={{ paddingTop: 4 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>📤 Import Trade CSV</h2>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
+                We&apos;ll mark your setup complete and take you straight to the import page — your data will be ready in minutes.
+              </p>
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => setSlide(2)} style={btnSecondary}>← Back</button>
             <button
               onClick={async () => {
-                await markComplete()   // wait for DB update before navigating
+                await markComplete()
                 router.push('/import')
               }}
               style={{ ...btnPrimary, flex: 1 }}
@@ -440,6 +519,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         </>
       )}
     </div>,
+
 
     // Slide 4 — Done
     <div key="done" style={{ textAlign: 'center', width: '100%' }}>
@@ -505,8 +585,10 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         padding: 24,
       }}>
         <div style={{
-          width: '100%', maxWidth: 520, color: 'white',
+          width: '100%', maxWidth: 540, color: 'white',
           animation: 'fadeUp 0.4s ease-out',
+          maxHeight: '90vh', overflowY: 'auto',
+          paddingBottom: 8,
         }}>
           {/* Progress dots */}
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 40 }}>
