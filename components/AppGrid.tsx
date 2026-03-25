@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import type { ColDef, GridApi } from 'ag-grid-community'
+import type { ColDef, GridApi, SelectionChangedEvent } from 'ag-grid-community'
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import * as XLSX from 'xlsx'
 import { appGridTheme } from '@/lib/agGridTheme'
@@ -16,6 +16,7 @@ export interface AppGridProps {
   exportFilename?: string
   height?: number | string
   showSearch?: boolean
+  onSelectionChanged?: (e: SelectionChangedEvent) => void
 }
 
 export default function AppGrid({
@@ -24,6 +25,7 @@ export default function AppGrid({
   exportFilename = 'export',
   height = 460,
   showSearch = true,
+  onSelectionChanged,
 }: AppGridProps) {
   const gridRef  = useRef<AgGridReact>(null)
   const [search,         setSearch]         = useState('')
@@ -143,6 +145,7 @@ export default function AppGrid({
           suppressRowClickSelection
           animateRows
           onFilterChanged={onFilterChanged as never}
+          onSelectionChanged={onSelectionChanged}
           domLayout="normal"
         />
       </div>

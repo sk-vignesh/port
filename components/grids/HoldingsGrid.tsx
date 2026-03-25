@@ -4,7 +4,6 @@ import dynamicImport from 'next/dynamic'
 import type { ColDef } from 'ag-grid-community'
 import Link from 'next/link'
 import { formatAmount, formatShares, formatPercent } from '@/lib/format'
-import { appGridTheme } from '@/lib/agGridTheme'
 
 const AppGrid = dynamicImport(() => import('@/components/AppGrid'), { ssr: false })
 
@@ -97,9 +96,7 @@ export default function HoldingsGrid({ rows }: { rows: HoldingRow[] }) {
       rowData={rows}
       columnDefs={colDefs}
       exportFilename="holdings"
-      height={Math.max(200, rows.length * 44 + 100)}
+      height={460}
     />
   )
 }
-
-export { appGridTheme }

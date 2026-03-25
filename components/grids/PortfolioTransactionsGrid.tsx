@@ -1,6 +1,6 @@
 'use client'
 import dynamicImport from 'next/dynamic'
-import type { ColDef, ValueGetterParams, ValueFormatterParams } from 'ag-grid-community'
+import type { ColDef, ValueGetterParams, ValueFormatterParams, SelectionChangedEvent } from 'ag-grid-community'
 import { formatDate } from '@/lib/format'
 
 const AppGrid = dynamicImport(() => import('@/components/AppGrid'), { ssr: false })
@@ -12,7 +12,7 @@ const BUY_TYPES = new Set(['BUY','DELIVERY_INBOUND','TRANSFER_IN'])
 
 export interface PortfolioTxRow {
   id: string; date: string; type: string; type_label: string
-  security_name: string | null; shares: number; amount: number
+  security_id: string | null; security_name: string | null; shares: number; amount: number
 }
 
 const colDefs: ColDef[] = [
@@ -56,6 +56,54 @@ const colDefs: ColDef[] = [
   },
 ]
 
-export default function PortfolioTransactionsGrid({ rows }: { rows: PortfolioTxRow[] }) {
-  return <AppGrid rowData={rows} columnDefs={colDefs} exportFilename="portfolio_transactions" height={460} />
+export default function PortfolioTransactionsGrid({
+  rows,
+  onSelectionChange,
+}: {
+  rows: PortfolioTxRow[]
+  portfolioId?: string
+  onSelectionChange?: (securityId: string | null, securityName: string | null) => void
+}) {
+  const colDefsWithLink: ColDef[] = [
+    ...colDefs.slice(0, 1), // date
+    ...colDefs.slice(1, 2), // type_label
+    {
+      field: 'security_name',
+      headerName: 'Security',
+      flex: 1,
+      minWidth: 140,
+      cellRenderer: (p: { data?: PortfolioTxRow }) =>
+        p.data?.security_id ? (
+          <a href={`/securities/${p.data.security_id}`}
+            style={{ color: 'var(--color-accent-light)', textDecoration: 'none', fontWeight: 500 }}
+            onClick={e => e.stopPropagation()}>
+            {p.data.security_name ?? '—'}
+          </a>
+        ) : (p.data?.security_name ?? '—'),
+    },
+    ...colDefs.slice(3), // shares, amount, price/share
+  ]
+
+  const handleSelectionChanged = (e: SelectionChangedEvent) => {
+    if (!onSelectionChange) return
+    const selected = (e.api.getSelectedRows() as PortfolioTxRow[])
+    if (selected.length === 0) { onSelectionChange(null, null); return }
+    const secId = selected[0].security_id
+    const allSame = selected.every(r => r.security_id === secId)
+    if (allSame && secId) {
+      onSelectionChange(secId, selected[0].security_name)
+    } else {
+      onSelectionChange(null, null)
+    }
+  }
+
+  return (
+    <AppGrid
+      rowData={rows}
+      columnDefs={colDefsWithLink}
+      exportFilename="portfolio_transactions"
+      height={460}
+      onSelectionChanged={handleSelectionChanged}
+    />
+  )
 }

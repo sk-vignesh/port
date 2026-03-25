@@ -3,11 +3,9 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PORTFOLIO_TX_LABELS } from '@/lib/format'
 import PortfolioPerformancePanel from '@/components/PortfolioPerformancePanel'
-import dynamicImport from 'next/dynamic'
+import PortfolioDetailClient from '@/components/PortfolioDetailClient'
 import type { PortfolioTxRow } from '@/components/grids/PortfolioTransactionsGrid'
 export const dynamic = 'force-dynamic'
-
-const PortfolioTransactionsGrid = dynamicImport(() => import('@/components/grids/PortfolioTransactionsGrid'), { ssr: false })
 
 export default async function PortfolioDetailPage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -18,7 +16,7 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
   const [{ data: portfolio }, { data: transactions }, { data: settings }] = await Promise.all([
     supabase.from('portfolios').select('*, accounts(name, currency_code)').eq('id', id).single(),
     supabase.from('portfolio_transactions')
-      .select('*, securities(name, currency_code)')
+      .select('*, securities(id, name, currency_code)')
       .eq('portfolio_id', id)
       .order('date', { ascending: false })
       .limit(500),
@@ -35,6 +33,7 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
     date:          tx.date,
     type:          tx.type,
     type_label:    PORTFOLIO_TX_LABELS[tx.type] ?? tx.type,
+    security_id:   (tx.securities as unknown as { id?: string } | null)?.id ?? null,
     security_name: (tx.securities as unknown as { name: string } | null)?.name ?? null,
     shares:        tx.shares,
     amount:        tx.amount,
@@ -45,7 +44,7 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
       <div className="page-header flex-between">
         <div>
           <div className="text-sm text-muted mb-2">
-            <Link href="/portfolios" style={{ color: 'var(--color-accent-light)' }}>Portfolios</Link>
+            <Link href="/portfolios" style={{ color: 'var(--color-accent-light)' }}>Asset Classes</Link>
             {' / '}<span>{portfolio.name}</span>
           </div>
           <h1 className="page-title">{portfolio.name}</h1>
@@ -59,26 +58,15 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
           </div>
         </div>
         <div className="flex flex-gap-3">
-          <Link href={`/portfolios/${id}/transactions/new`} className="btn btn-primary">+ Trade</Link>
+          <Link href={`/portfolios/${id}/transactions/new?type=BUY`} className="btn btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }}>↑ Buy</Link>
+          <Link href={`/portfolios/${id}/transactions/new?type=SELL`} className="btn btn-primary" style={{ background: '#ef4444', borderColor: '#ef4444' }}>↓ Sell</Link>
           <Link href={`/portfolios/${id}/edit`} className="btn btn-secondary">Edit</Link>
         </div>
       </div>
 
       <PortfolioPerformancePanel portfolioId={id} currency={currency} />
 
-      <div className="card" style={{ padding: '16px 20px' }}>
-        <div className="card-header" style={{ padding: '0 0 12px' }}>
-          <span className="card-title">Transactions ({rows.length})</span>
-          <Link href={`/portfolios/${id}/transactions/new`} className="btn btn-primary btn-sm">+ Trade</Link>
-        </div>
-        {rows.length === 0 ? (
-          <div className="empty-state" style={{ padding: 32 }}>
-            <div className="empty-state-text">No transactions yet — add a Buy to get started.</div>
-          </div>
-        ) : (
-          <PortfolioTransactionsGrid rows={rows} />
-        )}
-      </div>
+      <PortfolioDetailClient portfolioId={id} rows={rows} />
     </>
   )
 }
