@@ -1,10 +1,9 @@
 'use client'
 
 /**
- * OnboardingModal — fullscreen blocking modal shown to new users.
+ * OnboardingModal — fullscreen blocking modal.
+ * Two-column layout: large portrait fills left panel, conversational content on right.
  * 5 slides: Welcome → Features → Choose Path → [CAS|CSV|Manual] → Done
- * Cannot be dismissed without completing a path.
- * On completion, calls /api/onboarding-complete and unmounts.
  */
 
 import { useState, useCallback } from 'react'
@@ -13,20 +12,34 @@ import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput, { SearchResult } from '@/components/SecuritySearchInput'
 
-// ── Types ────────────────────────────────────────────────────────────────────
 type Path   = 'cas' | 'csv' | 'manual' | null
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
-// ── Tiny helpers ─────────────────────────────────────────────────────────────
 const Dot = ({ active, done }: { active: boolean; done: boolean }) => (
   <div style={{
     width: active ? 20 : 8, height: 8, borderRadius: 4,
-    background: done ? '#22c55e' : active ? '#6366f1' : 'rgba(255,255,255,0.2)',
+    background: done ? '#22c55e' : active ? '#6366f1' : 'rgba(255,255,255,0.25)',
     transition: 'all 0.3s',
   }} />
 )
 
-// ── Main Component ────────────────────────────────────────────────────────────
+// Speech bubble that makes text feel like dialogue
+const Speech = ({ children }: { children: React.ReactNode }) => (
+  <div style={{
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.13)',
+    borderRadius: '4px 18px 18px 18px',
+    padding: '14px 18px',
+    marginBottom: 24,
+    fontSize: '0.95rem',
+    lineHeight: 1.65,
+    color: 'rgba(255,255,255,0.88)',
+    position: 'relative',
+  }}>
+    {children}
+  </div>
+)
+
 export default function OnboardingModal({ onComplete }: { onComplete: () => void }) {
   const router  = useRouter()
   const [slide, setSlide]   = useState(0)
@@ -34,60 +47,47 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const [status, setStatus] = useState<Status>('idle')
   const [errMsg, setErrMsg] = useState('')
 
-  // Manual path state
-  const [picked, setPicked]       = useState<SearchResult | null>(null)
-  const [units, setUnits]         = useState('')
-  const [price, setPrice]         = useState('')
+  const [picked, setPicked]             = useState<SearchResult | null>(null)
+  const [units, setUnits]               = useState('')
+  const [price, setPrice]               = useState('')
   const [priceLoading, setPriceLoading] = useState(false)
-  const [date,  setDate]          = useState(new Date().toISOString().split('T')[0])
+  const [date,  setDate]                = useState(new Date().toISOString().split('T')[0])
 
-  // CAS path state
-  const [casFile, setCasFile]     = useState<File | null>(null)
+  const [casFile, setCasFile]         = useState<File | null>(null)
   const [casPassword, setCasPassword] = useState('')
-  const [casResult, setCasResult] = useState<{ funds: number; transactions: number } | null>(null)
+  const [casResult, setCasResult]     = useState<{ funds: number; transactions: number } | null>(null)
 
   const supabase = createClient()
 
-  // Mark complete in DB + notify parent
   const markComplete = useCallback(async () => {
     await fetch('/api/onboarding-complete', { method: 'POST' })
     onComplete()
   }, [onComplete])
 
-  // When a stock is selected, auto-fetch its latest NSE close price
   const handleStockSelect = async (r: SearchResult) => {
     setPicked(r)
     setPriceLoading(true)
     setPrice('')
     const { data } = await supabase
       .from('nse_market_data')
-      .select('close_price, date')
+      .select('close_price')
       .eq('symbol', r.symbol)
       .order('date', { ascending: false })
       .limit(1)
       .single()
-    if (data?.close_price) {
-      setPrice(String(data.close_price))
-    }
+    if (data?.close_price) setPrice(String(data.close_price))
     setPriceLoading(false)
   }
 
-  // Manual submit — creates security + BUY transaction using defaults
   const submitManual = async () => {
     if (!picked || !units || !price || !date) { setErrMsg('Please fill all fields'); return }
     setStatus('loading'); setErrMsg('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-
-      // Find default EQUITY portfolio
-      const { data: portfolios } = await supabase
-        .from('portfolios').select('id').eq('asset_class', 'EQUITY').limit(1)
-      const { data: accounts } = await supabase
-        .from('accounts').select('id').limit(1)
+      const { data: portfolios } = await supabase.from('portfolios').select('id').eq('asset_class', 'EQUITY').limit(1)
+      const { data: accounts }   = await supabase.from('accounts').select('id').limit(1)
       if (!portfolios?.length || !accounts?.length) throw new Error('No default portfolio found')
-
-      // Upsert security (type cast to avoid strict TS check on generated types)
       const { data: sec, error: secErr } = await supabase
         .from('securities')
         .upsert(
@@ -96,30 +96,20 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         )
         .select('id').single()
       if (secErr) throw secErr
-
-      // Insert BUY transaction (cast to never to handle account_id not in generated types)
-      const shares  = Math.round(parseFloat(units) * 100_000_000)
-      const amount  = Math.round(parseFloat(price) * parseFloat(units) * 100)
+      const shares = Math.round(parseFloat(units) * 100_000_000)
+      const amount = Math.round(parseFloat(price) * parseFloat(units) * 100)
       const { error: txErr } = await supabase.from('portfolio_transactions').insert({
-        portfolio_id:  portfolios[0].id,
-        account_id:    accounts[0].id,
-        security_id:   sec.id,
-        type:          'BUY',
-        currency_code: 'INR',
-        shares,
-        amount,
-        date,
+        portfolio_id: portfolios[0].id, account_id: accounts[0].id,
+        security_id: sec.id, type: 'BUY', currency_code: 'INR', shares, amount, date,
       } as never)
       if (txErr) throw txErr
-      setStatus('done')
-      setSlide(4)
+      setStatus('done'); setSlide(4)
     } catch (e: unknown) {
       setErrMsg(e instanceof Error ? e.message : 'Something went wrong')
       setStatus('error')
     }
   }
 
-  // CAS PDF submit
   const submitCAS = async () => {
     if (!casFile) { setErrMsg('Please select a PDF file'); return }
     setStatus('loading'); setErrMsg('')
@@ -127,91 +117,68 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
       const fd = new FormData()
       fd.append('pdf', casFile)
       if (casPassword) fd.append('password', casPassword)
-      const res = await fetch('/api/cas-import', { method: 'POST', body: fd })
+      const res  = await fetch('/api/cas-import', { method: 'POST', body: fd })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Import failed')
-      setCasResult(json.summary)
-      setStatus('done')
-      setSlide(4)
+      setCasResult(json.summary); setStatus('done'); setSlide(4)
     } catch (e: unknown) {
       setErrMsg(e instanceof Error ? e.message : 'Import failed')
       setStatus('error')
     }
   }
 
-  // ── Slide content ───────────────────────────────────────────────────────────
-  const slides: React.ReactNode[] = [
+  // ── Per-slide configuration ─────────────────────────────────────────────────
+  // Each slide declares which portrait to show and what the person "says"
+  const slideConfig = [
+    { img: '/onboarding/welcome.png',  glow: 'rgba(99,102,241,0.5)' },
+    { img: '/onboarding/features.png', glow: 'rgba(139,92,246,0.5)' },
+    { img: '/onboarding/choose.png',   glow: 'rgba(99,102,241,0.5)' },
+    {
+      img: path === 'manual' ? '/onboarding/manual.png'
+         : path === 'cas'    ? '/onboarding/choose.png'
+         : '/onboarding/features.png',
+      glow: 'rgba(99,102,241,0.5)',
+    },
+    { img: '/onboarding/done.png',     glow: 'rgba(34,197,94,0.5)'  },
+  ]
+
+  const cur = slideConfig[slide] ?? slideConfig[0]
+
+  // ── Right-panel content per slide ───────────────────────────────────────────
+  const content = [
 
     // Slide 0 — Welcome
-    <div key="welcome" style={{ textAlign: 'center', width: '100%' }}>
-      {/* Large portrait */}
-      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '50%', margin: '10%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-          filter: 'blur(24px)',
-        }} />
-        <img
-          src="/onboarding/welcome.png"
-          alt="Welcome to Apna Stocks"
-          style={{
-            width: 260, height: 310, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 28,
-            boxShadow: '0 24px 70px rgba(99,102,241,0.35), 0 4px 20px rgba(0,0,0,0.5)',
-            animation: 'floatY 4s ease-in-out infinite',
-            display: 'block',
-          }}
-        />
-      </div>
-      <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, marginTop: 4 }}>
-        Welcome to Apna Stocks
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', lineHeight: 1.65, maxWidth: 380, margin: '0 auto 20px' }}>
-        Your complete investment picture — one beautiful dashboard for every rupee you own.
-      </p>
-      {/* Asset class chips — icon + label, nothing hidden */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+    <>
+      <Speech>
+        👋 Hi! Welcome to <strong>Apna Stocks</strong>.
+        I'm here to help you get your complete investment picture in one place —
+        stocks, mutual funds, gold, fixed deposits, real estate — everything.
+      </Speech>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 28 }}>
         {ASSET_CLASS_LIST.map(ac => (
           <div key={ac.id} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 20, padding: '6px 12px',
+            borderRadius: 20, padding: '7px 14px',
           }}>
-            <span style={{ fontSize: '1rem' }}>{ac.icon}</span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{ac.label}</span>
+            <span style={{ fontSize: '1.1rem' }}>{ac.icon}</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{ac.label}</span>
           </div>
         ))}
       </div>
       <button onClick={() => setSlide(1)} style={{ ...btnPrimary, width: '100%' }}>
-        Let's Start →
+        Let's get started →
       </button>
-    </div>,
+    </>,
 
     // Slide 1 — Features
-    <div key="features" style={{ width: '100%', textAlign: 'center' }}>
-      {/* Hero portrait — large and centered */}
-      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
-        <div style={{
-          position: 'absolute', inset: 0, margin: '10%',
-          background: 'radial-gradient(circle, rgba(139,92,246,0.45) 0%, transparent 70%)',
-          filter: 'blur(24px)',
-        }} />
-        <img
-          src="/onboarding/features.png"
-          alt="Your complete investment toolkit"
-          style={{
-            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 28,
-            boxShadow: '0 24px 70px rgba(139,92,246,0.35), 0 4px 20px rgba(0,0,0,0.5)',
-            display: 'block',
-          }}
-        />
-      </div>
-      <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 6 }}>Your complete toolkit</h2>
-      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: 18, lineHeight: 1.5 }}>
-        Built for Indian investors who want real returns, not just paper gains
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20, textAlign: 'left' }}>
+    <>
+      <Speech>
+        Before we set you up, let me tell you what you're getting.
+        This isn't just a spreadsheet — it's a proper investment command centre,
+        built for Indian investors who want to see <strong>real returns</strong>.
+      </Speech>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
         {[
           { icon: '📈', title: 'True Returns (XIRR)', body: 'Accounts for when you invested each rupee' },
           { icon: '🗂', title: 'Every Asset Class', body: 'Stocks, MFs, Gold, FDs, Real Estate' },
@@ -219,133 +186,64 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           { icon: '📋', title: 'Gains & Tax', body: 'LTCG vs STCG — ready for ITR season' },
         ].map(f => (
           <div key={f.title} style={{
-            background: 'rgba(255,255,255,0.07)', borderRadius: 14,
-            border: '1px solid rgba(255,255,255,0.12)', padding: '14px 12px',
+            background: 'rgba(255,255,255,0.06)', borderRadius: 14,
+            border: '1px solid rgba(255,255,255,0.10)', padding: '14px 12px',
           }}>
-            <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{f.icon}</div>
+            <div style={{ fontSize: '1.5rem', marginBottom: 6 }}>{f.icon}</div>
             <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: 3 }}>{f.title}</div>
-            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>{f.body}</div>
+            <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>{f.body}</div>
           </div>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={() => setSlide(0)} style={btnSecondary}>← Back</button>
-        <button onClick={() => setSlide(2)} style={{ ...btnPrimary, flex: 1 }}>Continue →</button>
+        <button onClick={() => setSlide(2)} style={{ ...btnPrimary, flex: 1 }}>Sounds great →</button>
       </div>
-    </div>,
+    </>,
 
     // Slide 2 — Choose path
-    <div key="choose" style={{ width: '100%', textAlign: 'center' }}>
-      {/* Hero portrait */}
-      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
-        <div style={{
-          position: 'absolute', inset: 0, margin: '10%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-          filter: 'blur(24px)',
-        }} />
-        <img
-          src="/onboarding/choose.png"
-          alt="How would you like to get started?"
-          style={{
-            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 28,
-            boxShadow: '0 24px 70px rgba(99,102,241,0.3), 0 4px 20px rgba(0,0,0,0.5)',
-            display: 'block',
-          }}
-        />
-      </div>
-      <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 6 }}>How would you like to start?</h2>
-      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 18 }}>
-        Pick the fastest path for you
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18, textAlign: 'left' }}>
+    <>
+      <Speech>
+        Alright! Let's get your investments in. How would you like to start?
+        Pick whatever is easiest for you right now.
+      </Speech>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
         {[
-          {
-            id: 'cas' as Path, icon: '📂',
-            title: 'CAS Statement (Mutual Funds)',
-            desc: 'Upload your CAMS / KFintech PDF — imports everything automatically',
-          },
-          {
-            id: 'csv' as Path, icon: '📤',
-            title: 'Upload Trade CSV',
-            desc: 'From Kuvera, Groww, Zerodha or any broker',
-          },
-          {
-            id: 'manual' as Path, icon: '✏️',
-            title: 'Add a Holding Manually',
-            desc: 'Type in your first stock — takes 30 seconds',
-          },
+          { id: 'cas' as Path, icon: '📂', title: 'CAS Statement (Mutual Funds)', desc: 'Upload your CAMS / KFintech PDF — I\'ll import everything automatically' },
+          { id: 'csv' as Path, icon: '📤', title: 'Upload Trade CSV', desc: 'From Kuvera, Groww, Zerodha or any broker — quick and easy' },
+          { id: 'manual' as Path, icon: '✏️', title: 'Add a Holding Manually', desc: 'Type in your first stock right now — takes 30 seconds, I promise' },
         ].map(opt => (
           <button key={opt.id} onClick={() => { setPath(opt.id); setSlide(3) }} style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14,
-            padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
-            background: 'rgba(255,255,255,0.07)', cursor: 'pointer', textAlign: 'left',
-            color: 'white',
+            display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px',
+            borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(255,255,255,0.06)', cursor: 'pointer', textAlign: 'left', color: 'white',
           }}>
             <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{opt.icon}</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 3 }}>{opt.title}</div>
-              <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>{opt.desc}</div>
+              <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>{opt.desc}</div>
             </div>
           </button>
         ))}
       </div>
       <button onClick={() => setSlide(1)} style={btnSecondary}>← Back</button>
-    </div>,
+    </>,
 
-    // Slide 3 — Path-specific
-    <div key="path" style={{ width: '100%' }}>
+    // Slide 3 — Path detail
+    <>
       {path === 'manual' && (
         <>
-          {/* Guide image beside heading */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-                filter: 'blur(14px)',
-              }} />
-              <img
-                src="/onboarding/manual.png"
-                alt="Add your first holding"
-                style={{
-                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
-                  borderRadius: 18,
-                  boxShadow: '0 12px 40px rgba(99,102,241,0.3), 0 4px 12px rgba(0,0,0,0.4)',
-                  display: 'block',
-                }}
-              />
-            </div>
-            <div style={{ paddingTop: 4 }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>✏️ Add your first holding</h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
-                We'll add it to your default Stocks portfolio automatically — no setup needed.
-              </p>
-            </div>
-          </div>
-
-          {/* Stock search — uses SecuritySearchInput with dark-theme overrides */}
+          <Speech>
+            Perfect! Search for the stock you hold. I'll fetch the current price automatically
+            — just tell me how many units you own and when you bought them.
+          </Speech>
           <style>{`
-            .onb-search .search-container { position: relative; }
-            .onb-search input {
-              background: rgba(255,255,255,0.08) !important;
-              border: 1px solid rgba(255,255,255,0.2) !important;
-              color: white !important;
-              border-radius: 10px !important;
-            }
+            .onb-search input { background: rgba(255,255,255,0.08) !important; border: 1px solid rgba(255,255,255,0.2) !important; color: white !important; border-radius: 10px !important; }
             .onb-search input::placeholder { color: rgba(255,255,255,0.4) !important; }
-            .onb-search [role="listbox"], .onb-search [class*="results"], .onb-search ul {
-              background: #1e2035 !important;
-              border: 1px solid rgba(255,255,255,0.15) !important;
-            }
-            .onb-search [role="option"], .onb-search li {
-              color: white !important;
-            }
-            .onb-search [role="option"]:hover, .onb-search li:hover {
-              background: rgba(255,255,255,0.08) !important;
-            }
+            .onb-search [role="listbox"], .onb-search [class*="results"], .onb-search ul { background: #1e2035 !important; border: 1px solid rgba(255,255,255,0.15) !important; }
+            .onb-search [role="option"], .onb-search li { color: white !important; }
+            .onb-search [role="option"]:hover, .onb-search li:hover { background: rgba(255,255,255,0.08) !important; }
           `}</style>
-
           <div className="onb-search" style={{ marginBottom: 14 }}>
             {picked ? (
               <div style={{
@@ -355,28 +253,17 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               }}>
                 <div>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{picked.symbol}</span>
-                  {' '}
-                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>{picked.name}</span>
+                  {' '}<span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>{picked.name}</span>
                   {picked.sector && (
-                    <span style={{
-                      marginLeft: 8, fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4,
-                      background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)',
-                    }}>{picked.sector}</span>
+                    <span style={{ marginLeft: 8, fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }}>{picked.sector}</span>
                   )}
                 </div>
-                <button onClick={() => setPicked(null)} style={{
-                  background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
-                  cursor: 'pointer', fontSize: '1rem', padding: '0 4px',
-                }}>✕</button>
+                <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
               </div>
             ) : (
-              <SecuritySearchInput
-                onSelect={handleStockSelect}
-                placeholder="Search: Reliance, TCS, HDFC Bank, Nifty BeES…"
-              />
+              <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" />
             )}
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>Units</label>
@@ -385,20 +272,11 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             <div>
               <label style={labelStyle}>
                 Price (₹)
-                {priceLoading && <span style={{ marginLeft: 6, opacity: 0.5, fontSize: '0.68rem' }}>fetching…</span>}
-                {!priceLoading && price && <span style={{ marginLeft: 6, opacity: 0.5, fontSize: '0.68rem' }}>current price — edit if different</span>}
+                {priceLoading && <span style={{ marginLeft: 5, opacity: 0.5, fontSize: '0.65rem' }}>fetching…</span>}
+                {!priceLoading && price && <span style={{ marginLeft: 5, opacity: 0.5, fontSize: '0.65rem' }}>current — edit if needed</span>}
               </label>
-              <input
-                type="number"
-                placeholder={priceLoading ? 'Fetching price…' : '2350'}
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  borderColor: (!priceLoading && price) ? 'rgba(99,102,241,0.5)' : undefined,
-                }}
-                min="0" step="any"
-              />
+              <input type="number" placeholder="2350" value={price} onChange={e => setPrice(e.target.value)}
+                style={{ ...inputStyle, borderColor: (!priceLoading && price) ? 'rgba(99,102,241,0.5)' : undefined }} min="0" step="any" />
             </div>
             <div>
               <label style={labelStyle}>Buy Date</label>
@@ -417,41 +295,16 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
       {path === 'cas' && (
         <>
-          {/* Guide image beside heading */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-                filter: 'blur(14px)',
-              }} />
-              <img
-                src="/onboarding/choose.png"
-                alt="Upload your CAS PDF"
-                style={{
-                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
-                  borderRadius: 18,
-                  boxShadow: '0 12px 40px rgba(99,102,241,0.3), 0 4px 12px rgba(0,0,0,0.4)',
-                  display: 'block',
-                }}
-              />
-            </div>
-            <div style={{ paddingTop: 4 }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>📂 Upload CAS PDF</h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
-                Download from{' '}
-                <a href="https://www.mfcentral.com" target="_blank" rel="noreferrer" style={{ color: '#818cf8' }}>mfcentral.com</a>
-                {' '}or from your CAMS / KFintech inbox.
-              </p>
-            </div>
-          </div>
+          <Speech>
+            Great choice. Download your CAS from{' '}
+            <a href="https://www.mfcentral.com" target="_blank" rel="noreferrer" style={{ color: '#818cf8' }}>mfcentral.com</a>
+            {' '}or check your CAMS / KFintech email. If the PDF has a password, it's usually your PAN + date of birth.
+          </Speech>
           <label style={{
             display: 'block', border: '2px dashed rgba(255,255,255,0.2)',
-            borderRadius: 12, padding: '20px', textAlign: 'center', cursor: 'pointer',
-            marginBottom: 14, transition: 'border-color 0.15s',
+            borderRadius: 12, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 14,
           }}>
-            <input type="file" accept=".pdf" style={{ display: 'none' }}
-              onChange={e => setCasFile(e.target.files?.[0] ?? null)} />
+            <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => setCasFile(e.target.files?.[0] ?? null)} />
             <div style={{ fontSize: '2rem', marginBottom: 8 }}>📄</div>
             <div style={{ fontSize: '0.88rem', color: casFile ? '#86efac' : 'rgba(255,255,255,0.6)' }}>
               {casFile ? `✓ ${casFile.name}` : 'Click to browse or drop PDF here'}
@@ -459,8 +312,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           </label>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>PDF Password (if protected)</label>
-            <input type="password" placeholder="Usually PAN + DOB e.g. ABCDE1234F01011990"
-              value={casPassword} onChange={e => setCasPassword(e.target.value)} style={inputStyle} />
+            <input type="password" placeholder="e.g. ABCDE1234F01011990" value={casPassword} onChange={e => setCasPassword(e.target.value)} style={inputStyle} />
           </div>
           {errMsg && <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: 10 }}>{errMsg}</div>}
           <div style={{ display: 'flex', gap: 10 }}>
@@ -475,131 +327,105 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
       {path === 'csv' && (
         <>
-          {/* Guide image beside heading */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
-                filter: 'blur(14px)',
-              }} />
-              <img
-                src="/onboarding/features.png"
-                alt="Import your trade CSV"
-                style={{
-                  width: 100, height: 130, objectFit: 'cover', objectPosition: 'top',
-                  borderRadius: 18,
-                  boxShadow: '0 12px 40px rgba(139,92,246,0.3), 0 4px 12px rgba(0,0,0,0.4)',
-                  display: 'block',
-                }}
-              />
-            </div>
-            <div style={{ paddingTop: 4 }}>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>📤 Import Trade CSV</h2>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.55 }}>
-                We&apos;ll mark your setup complete and take you straight to the import page — your data will be ready in minutes.
-              </p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <Speech>
+            Sure! I'll take you straight to the import page. It'll walk you through mapping your broker's columns.
+            Your data will be ready in a few minutes.
+          </Speech>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
             <button onClick={() => setSlide(2)} style={btnSecondary}>← Back</button>
-            <button
-              onClick={async () => {
-                await markComplete()
-                router.push('/import')
-              }}
-              style={{ ...btnPrimary, flex: 1 }}
-            >
+            <button onClick={async () => { await markComplete(); router.push('/import') }} style={{ ...btnPrimary, flex: 1 }}>
               Go to Import →
             </button>
           </div>
-          <button onClick={markComplete} style={{ ...btnSecondary, width: '100%', marginTop: 10, textAlign: 'center' }}>
+          <button onClick={markComplete} style={{ ...btnSecondary, width: '100%', textAlign: 'center' }}>
             Skip — I&apos;ll do this later
           </button>
         </>
       )}
-    </div>,
-
+    </>,
 
     // Slide 4 — Done
-    <div key="done" style={{ textAlign: 'center', width: '100%' }}>
-      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 16 }}>
-        <div style={{
-          position: 'absolute', inset: 0, margin: '10%',
-          background: 'radial-gradient(circle, rgba(34,197,94,0.4) 0%, transparent 70%)',
-          filter: 'blur(20px)',
-        }} />
-        <img
-          src="/onboarding/done.png"
-          alt="Celebrating your investment journey"
-          style={{
-            width: 260, height: 310, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 28,
-            boxShadow: '0 24px 70px rgba(34,197,94,0.3), 0 4px 20px rgba(0,0,0,0.5)',
-            animation: 'floatY 4s ease-in-out infinite',
-            display: 'block',
-          }}
-        />
-      </div>
-      <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 10 }}>You&apos;re all set!</h2>
-      {casResult && (
-        <div style={{
-          background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-          borderRadius: 12, padding: '12px 20px', marginBottom: 20, fontSize: '0.88rem', color: '#86efac',
-        }}>
-          ✓ Imported {casResult.funds} funds · {casResult.transactions} transactions
-        </div>
-      )}
-      {path === 'manual' && (
-        <div style={{
-          background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-          borderRadius: 12, padding: '12px 20px', marginBottom: 20, fontSize: '0.88rem', color: '#86efac',
-        }}>
-          ✓ Your first holding has been added
-        </div>
-      )}
-      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem', lineHeight: 1.65, maxWidth: 360, margin: '0 auto 28px' }}>
-        Your portfolio is live. You can add more holdings, explore your
-        analytics, and set price alerts — all from the dashboard.
-      </p>
-      <button onClick={markComplete} style={{ ...btnPrimary, width: '100%' }}>
-        Go to Dashboard →
+    <>
+      <Speech>
+        🎉 That's it — you're <strong>all set!</strong>
+        {casResult && <><br />I imported <strong>{casResult.funds} funds</strong> and <strong>{casResult.transactions} transactions</strong> from your CAS.</>}
+        {path === 'manual' && <><br />Your first holding is in. Go explore your portfolio!</>}
+        {' '}Your dashboard is live — check your returns, set alerts, and dig into the analytics whenever you're ready.
+      </Speech>
+      <button onClick={markComplete} style={{ ...btnPrimary, width: '100%', fontSize: '1rem', padding: '16px 24px' }}>
+        Go to my Dashboard →
       </button>
-    </div>,
+    </>,
   ]
-
-  const totalSlides = 5
 
   return (
     <>
       <style>{`
-        @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes floatY  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
       `}</style>
+
       {/* Fullscreen overlay */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: 'linear-gradient(135deg, #0f1022 0%, #1a1a3e 50%, #0d1a2e 100%)',
+        background: 'linear-gradient(135deg, #0a0d1a 0%, #151530 50%, #0a1520 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: 24,
       }}>
+        {/* Card */}
         <div style={{
-          width: '100%', maxWidth: 540, color: 'white',
+          width: '100%', maxWidth: 820,
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: 32,
+          display: 'flex',
+          overflow: 'hidden',
+          minHeight: 520,
           animation: 'fadeUp 0.4s ease-out',
-          maxHeight: '90vh', overflowY: 'auto',
-          paddingBottom: 8,
+          boxShadow: '0 40px 120px rgba(0,0,0,0.6)',
         }}>
-          {/* Progress dots */}
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 40 }}>
-            {Array.from({ length: totalSlides }).map((_, i) => (
-              <Dot key={i} active={i === slide} done={i < slide} />
-            ))}
+          {/* ── LEFT: Large portrait ───────────────────────────────── */}
+          <div style={{
+            width: 320, flexShrink: 0,
+            position: 'relative',
+            background: `radial-gradient(circle at center bottom, ${cur.glow} 0%, rgba(10,13,26,0.8) 70%)`,
+            overflow: 'hidden',
+          }}>
+            <img
+              key={cur.img}
+              src={cur.img}
+              alt="Your guide"
+              style={{
+                width: '100%', height: '100%',
+                objectFit: 'cover', objectPosition: 'top center',
+                display: 'block',
+                transition: 'opacity 0.4s',
+              }}
+            />
+            {/* subtle gradient overlay at bottom so portrait bleeds into background */}
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
+              background: 'linear-gradient(transparent, rgba(10,13,26,0.6))',
+            }} />
           </div>
 
-          {/* Slide content */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            {slides[slide]}
+          {/* ── RIGHT: Dialogue + content ──────────────────────────── */}
+          <div style={{
+            flex: 1, padding: '36px 32px',
+            display: 'flex', flexDirection: 'column',
+            overflowY: 'auto', color: 'white',
+          }}>
+            {/* Progress dots */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Dot key={i} active={i === slide} done={i < slide} />
+              ))}
+            </div>
+
+            {/* Slide content */}
+            <div style={{ flex: 1, animation: 'fadeUp 0.3s ease-out' }}>
+              {content[slide]}
+            </div>
           </div>
         </div>
       </div>
@@ -607,7 +433,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   )
 }
 
-// ── Shared styles ─────────────────────────────────────────────────────────────
+// ── Shared styles ──────────────────────────────────────────────────────────────
 const btnPrimary: React.CSSProperties = {
   padding: '13px 24px', borderRadius: 12, border: 'none',
   background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: '0.92rem',
@@ -625,6 +451,6 @@ const inputStyle: React.CSSProperties = {
   color: 'white', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.75rem', fontWeight: 600,
+  display: 'block', fontSize: '0.74rem', fontWeight: 600,
   color: 'rgba(255,255,255,0.5)', marginBottom: 5,
 }
