@@ -144,16 +144,27 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
     // Slide 0 — Welcome
     <div key="welcome" style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '4rem', marginBottom: 16, animation: 'pulse 2s infinite' }}>📊</div>
-      <h1 style={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 12 }}>
+      {/* Guide character */}
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <img
+          src="/onboarding/welcome.png"
+          alt="Your friendly guide"
+          style={{
+            width: 160, height: 160, objectFit: 'contain',
+            filter: 'drop-shadow(0 8px 24px rgba(99,102,241,0.4))',
+            animation: 'floatY 3s ease-in-out infinite',
+          }}
+        />
+      </div>
+      <h1 style={{ fontSize: '1.7rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 10 }}>
         Welcome to Apna Stocks
       </h1>
-      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1rem', lineHeight: 1.65, maxWidth: 400, margin: '0 auto 28px' }}>
+      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: 1.65, maxWidth: 400, margin: '0 auto 24px' }}>
         Your complete investment picture — stocks, mutual funds, gold,
         fixed deposits, and real estate — all in one place.
       </p>
       {/* Asset class icons ticker */}
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 36, fontSize: '1.8rem' }}>
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 28, fontSize: '1.6rem' }}>
         {ASSET_CLASS_LIST.map(ac => (
           <div key={ac.id} title={ac.label} style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}>
             {ac.icon}
@@ -167,11 +178,24 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
     // Slide 1 — Features
     <div key="features" style={{ width: '100%' }}>
-      <h2 style={{ fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', marginBottom: 6 }}>What you get</h2>
-      <p style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', fontSize: '0.88rem', marginBottom: 28 }}>
-        Built for Indian investors who want to see real returns
-      </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
+      {/* Character + heading row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+        <img
+          src="/onboarding/features.png"
+          alt="Your guide explaining features"
+          style={{
+            width: 90, height: 90, objectFit: 'contain', flexShrink: 0,
+            filter: 'drop-shadow(0 4px 16px rgba(139,92,246,0.4))',
+          }}
+        />
+        <div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 }}>What you get</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+            Built for Indian investors who want to see real returns
+          </p>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
         {[
           { icon: '📈', title: 'True Returns (XIRR)', body: 'Accounts for when you invested each rupee — not just simple % gain' },
           { icon: '🗂', title: 'Every Asset Class', body: 'Stocks, MFs, Gold, FDs, Real Estate — one unified view' },
@@ -399,7 +423,15 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
     // Slide 4 — Done
     <div key="done" style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>🎉</div>
+      <img
+        src="/onboarding/done.png"
+        alt="Celebrating your investment journey!"
+        style={{
+          width: 150, height: 150, objectFit: 'contain', marginBottom: 8,
+          filter: 'drop-shadow(0 8px 24px rgba(34,197,94,0.35))',
+          animation: 'floatY 3s ease-in-out infinite',
+        }}
+      />
       <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 10 }}>You&apos;re all set!</h2>
       {casResult && (
         <div style={{
@@ -432,8 +464,9 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   return (
     <>
       <style>{`
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+        @keyframes fadeUp  { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes floatY  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
       `}</style>
       {/* Fullscreen overlay */}
       <div style={{
