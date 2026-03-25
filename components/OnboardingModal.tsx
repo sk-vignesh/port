@@ -33,10 +33,11 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const [errMsg, setErrMsg] = useState('')
 
   // Manual path state
-  const [picked, setPicked] = useState<SearchResult | null>(null)
-  const [units, setUnits]   = useState('')
-  const [price, setPrice]   = useState('')
-  const [date,  setDate]    = useState(new Date().toISOString().split('T')[0])
+  const [picked, setPicked]       = useState<SearchResult | null>(null)
+  const [units, setUnits]         = useState('')
+  const [price, setPrice]         = useState('')
+  const [priceLoading, setPriceLoading] = useState(false)
+  const [date,  setDate]          = useState(new Date().toISOString().split('T')[0])
 
   // CAS path state
   const [casFile, setCasFile]     = useState<File | null>(null)
@@ -51,7 +52,23 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     onComplete()
   }, [onComplete])
 
-  // NSE stock search handled by SecuritySearchInput component
+  // When a stock is selected, auto-fetch its latest NSE close price
+  const handleStockSelect = async (r: SearchResult) => {
+    setPicked(r)
+    setPriceLoading(true)
+    setPrice('')
+    const { data } = await supabase
+      .from('nse_market_data')
+      .select('close_price, date')
+      .eq('symbol', r.symbol)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single()
+    if (data?.close_price) {
+      setPrice(String(data.close_price))
+    }
+    setPriceLoading(false)
+  }
 
   // Manual submit — creates security + BUY transaction using defaults
   const submitManual = async () => {
@@ -273,7 +290,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               </div>
             ) : (
               <SecuritySearchInput
-                onSelect={(r) => setPicked(r)}
+                onSelect={handleStockSelect}
                 placeholder="Search: Reliance, TCS, HDFC Bank, Nifty BeES…"
               />
             )}
@@ -285,8 +302,22 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
               <input type="number" placeholder="100" value={units} onChange={e => setUnits(e.target.value)} style={inputStyle} min="0" step="any" />
             </div>
             <div>
-              <label style={labelStyle}>Price (₹)</label>
-              <input type="number" placeholder="2350" value={price} onChange={e => setPrice(e.target.value)} style={inputStyle} min="0" step="any" />
+              <label style={labelStyle}>
+                Price (₹)
+                {priceLoading && <span style={{ marginLeft: 6, opacity: 0.5, fontSize: '0.68rem' }}>fetching…</span>}
+                {!priceLoading && price && <span style={{ marginLeft: 6, opacity: 0.5, fontSize: '0.68rem' }}>current price — edit if different</span>}
+              </label>
+              <input
+                type="number"
+                placeholder={priceLoading ? 'Fetching price…' : '2350'}
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  borderColor: (!priceLoading && price) ? 'rgba(99,102,241,0.5)' : undefined,
+                }}
+                min="0" step="any"
+              />
             </div>
             <div>
               <label style={labelStyle}>Buy Date</label>
