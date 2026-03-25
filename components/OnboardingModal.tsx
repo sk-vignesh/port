@@ -129,7 +129,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     : slide === 1                        ? '/onboarding/features.png'
     : (slide === 3 && path === 'manual') ? '/onboarding/manual.png'
     : slide === 2 || slide === 3         ? '/onboarding/choose.png'
-    :                                      '/onboarding/welcome.jpg'
+    :                                      '/onboarding/step1.jpg'
 
   // ── Panel layout helper — content grows, buttons always at bottom ────────────
   const Panel = ({ children, buttons }: { children: React.ReactNode; buttons: React.ReactNode }) => (
