@@ -111,6 +111,15 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
             <span className={`badge ${portfolio.is_retired ? 'badge-gray' : 'badge-green'}`}>
               {portfolio.is_retired ? 'Retired' : 'Active'}
             </span>
+            {(portfolio as unknown as { broker_name?: string }).broker_name && (
+              <span style={{
+                fontSize: '0.7rem', padding: '2px 10px', borderRadius: 4, fontWeight: 600,
+                background: 'rgba(99,102,241,0.12)', color: '#818cf8',
+                border: '1px solid rgba(99,102,241,0.2)',
+              }}>
+                {(portfolio as unknown as { broker_name?: string }).broker_name}
+              </span>
+            )}
             {refAccount && (
               <span className="text-sm text-muted">Reference: {refAccount.name} ({currency})</span>
             )}

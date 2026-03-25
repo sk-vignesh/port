@@ -13,12 +13,12 @@ export default function EditAccountPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState({ name: '', currency_code: 'INR', note: '', is_retired: false })
+  const [form, setForm] = useState({ name: '', currency_code: 'INR', note: '', is_retired: false, broker_name: '' })
 
   useEffect(() => {
     supabase.from('accounts').select('*').eq('id', params.id).single()
       .then(({ data }) => {
-        if (data) setForm({ name: data.name, currency_code: data.currency_code, note: data.note ?? '', is_retired: data.is_retired })
+        if (data) setForm({ name: data.name, currency_code: data.currency_code, note: data.note ?? '', is_retired: data.is_retired, broker_name: (data as unknown as { broker_name?: string }).broker_name ?? '' })
         setLoading(false)
       })
   }, [params.id])
@@ -33,6 +33,7 @@ export default function EditAccountPage({ params }: { params: { id: string } }) 
     const { error: err } = await supabase.from('accounts').update({
       name: form.name.trim(), currency_code: form.currency_code,
       note: form.note.trim() || null, is_retired: form.is_retired,
+      broker_name: form.broker_name.trim() || null,
     }).eq('id', params.id)
     if (err) { setError(err.message); setSaving(false); return }
     router.push(`/accounts/${params.id}`)
@@ -64,6 +65,11 @@ export default function EditAccountPage({ params }: { params: { id: string } }) 
               <select className="form-input form-select" value={form.currency_code} onChange={set('currency_code')}>
                 {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Broker / Bank</label>
+              <input type="text" className="form-input" value={form.broker_name} onChange={set('broker_name')}
+                placeholder="e.g. Zerodha, HDFC Bank, SBI" maxLength={60} />
             </div>
             <div className="form-group">
               <label className="form-label">Notes</label>

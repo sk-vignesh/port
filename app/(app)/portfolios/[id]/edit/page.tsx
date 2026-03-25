@@ -15,14 +15,14 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [accounts, setAccounts] = useState<{ id: string; name: string; currency_code: string }[]>([])
-  const [form, setForm] = useState({ name: '', note: '', reference_account_id: '', is_retired: false })
+  const [form, setForm] = useState({ name: '', note: '', reference_account_id: '', is_retired: false, broker_name: '' })
 
   useEffect(() => {
     Promise.all([
       supabase.from('portfolios').select('*').eq('id', params.id).single(),
       supabase.from('accounts').select('id, name, currency_code').eq('is_retired', false).order('name'),
     ]).then(([{ data: p }, { data: a }]) => {
-      if (p) setForm({ name: p.name, note: p.note ?? '', reference_account_id: p.reference_account_id ?? '', is_retired: p.is_retired })
+      if (p) setForm({ name: p.name, note: p.note ?? '', reference_account_id: p.reference_account_id ?? '', is_retired: p.is_retired, broker_name: (p as unknown as { broker_name?: string }).broker_name ?? '' })
       if (a) setAccounts(a)
       setLoading(false)
     })
@@ -38,6 +38,7 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
     const { error: err } = await supabase.from('portfolios').update({
       name: form.name.trim(), note: form.note.trim() || null,
       reference_account_id: form.reference_account_id || null, is_retired: form.is_retired,
+      broker_name: form.broker_name.trim() || null,
     }).eq('id', params.id)
     if (err) { setError(err.message); setSaving(false); return }
     router.push(`/portfolios/${params.id}`)
@@ -86,6 +87,11 @@ export default function EditPortfolioPage({ params }: { params: { id: string } }
                 <option value="">— none —</option>
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency_code})</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Broker / Platform</label>
+              <input type="text" className="form-input" value={form.broker_name} onChange={set('broker_name')}
+                placeholder="e.g. Zerodha, Groww, HDFC Securities" maxLength={60} />
             </div>
             <div className="form-group">
               <label className="form-label">Notes</label>

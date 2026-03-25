@@ -76,21 +76,29 @@ function LogoMark({ size = 32 }: { size?: number }) {
 export default function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
-  const [collapsed, setCollapsed]     = useState(false)
-  const [portfolios, setPortfolios]   = useState<Portfolio[]>([])
-  const [portOpen, setPortOpen]       = useState(true)
+  const [collapsed, setCollapsed]         = useState(false)
+  const [portfolios, setPortfolios]       = useState<Portfolio[]>([])
+  const [portOpen, setPortOpen]           = useState(true)
+  const [alertCount, setAlertCount]       = useState(0)
 
   // Fetch portfolios client-side for sidebar list
   useEffect(() => {
     const supabase = createClient()
     supabase.from('portfolios').select('id, name').eq('is_retired', false).order('name')
       .then(({ data }) => { if (data) setPortfolios(data) })
+    // Fetch triggered (fired) alert count for the badge
+    supabase
+      .from('watch_alerts')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .not('triggered_at', 'is', null)
+      .then(({ count }) => { if ((count ?? 0) > 0) setAlertCount(count!) })
   }, [])
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
-  const NavLink = ({ href, label, icon, color }: { href: string; label: string; icon: React.ReactNode; color: string }) => {
+  const NavLink = ({ href, label, icon, color, badge }: { href: string; label: string; icon: React.ReactNode; color: string; badge?: number }) => {
     const active = isActive(href)
     return (
       <Link href={href} style={{
@@ -109,6 +117,17 @@ export default function Sidebar() {
       title={collapsed ? label : undefined}>
         <IconWrap color={color}>{icon}</IconWrap>
         {!collapsed && <span style={{ lineHeight: 1 }}>{label}</span>}
+        {badge && badge > 0 && (
+          <span style={{
+            marginLeft: collapsed ? 0 : 'auto',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 16, height: 16, borderRadius: 999, padding: '0 4px',
+            background: '#ef4444', color: '#fff',
+            fontSize: '0.6rem', fontWeight: 800, lineHeight: 1,
+          }}>
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
       </Link>
     )
   }
@@ -205,7 +224,11 @@ export default function Sidebar() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {group.items.map(item => (
-                <NavLink key={item.href} {...item} />
+                <NavLink
+                  key={item.href}
+                  {...item}
+                  badge={item.href === '/watchlists' ? alertCount : undefined}
+                />
               ))}
             </div>
           </div>
