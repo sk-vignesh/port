@@ -9,6 +9,7 @@ import MyIndexChart from '@/components/MyIndexChart'
 import { ASSET_CLASS_ICONS } from '@/lib/assetClasses'
 import DashboardTradeButton from '@/components/DashboardTradeButton'
 import PerformerCards from '@/components/PerformerCards'
+import PageHelp from '@/components/PageHelp'
 
 export const dynamic = 'force-dynamic'
 
