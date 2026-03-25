@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput from '@/components/SecuritySearchInput'
-import { type IndianStock } from '@/lib/indian-stocks'
+import { type SearchResult } from '@/components/SecuritySearchInput'
 
 const TX_TYPES = [
   { value: 'BUY',               label: 'Buy',          color: '#22c55e' },
@@ -61,7 +61,7 @@ export default function EquityTradeForm({ portfolioId }: { portfolioId: string }
   // For split: shares = new total shares (ratio), price = 0
   const totalAmount = !isDividend && shares && price && +shares > 0 && +price > 0 ? +shares * +price : null
 
-  const handleSelectStock = async (stock: IndianStock) => {
+  const handleSelectStock = async (stock: SearchResult) => {
     setError(null); setResolving(true)
     const { data: existing } = await supabase.from('securities').select('id, name, ticker_symbol, currency_code').eq('ticker_symbol', stock.symbol).maybeSingle()
     if (existing) {

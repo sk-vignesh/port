@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput from '@/components/SecuritySearchInput'
-import { type IndianStock } from '@/lib/indian-stocks'
+import { type SearchResult } from '@/components/SecuritySearchInput'
 
 interface WatchlistItem {
   security_id: string
@@ -44,7 +44,7 @@ export default function EditWatchlistPage({ params }: { params: { id: string } }
     setSaving(false)
   }
 
-  const addSecurity = async (stock: IndianStock) => {
+  const addSecurity = async (stock: SearchResult) => {
     setAddMsg(null)
     // 1. Find or create the security
     let secId: string | null = null

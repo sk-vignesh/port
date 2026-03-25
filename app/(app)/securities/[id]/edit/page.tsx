@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput from '@/components/SecuritySearchInput'
-import { type IndianStock } from '@/lib/indian-stocks'
+import { type SearchResult } from '@/components/SecuritySearchInput'
 
 const CURRENCIES = ['EUR','USD','GBP','INR','CHF','JPY','CAD','AUD','SEK','NOK','DKK']
 
@@ -109,7 +109,7 @@ export default function EditSecurityPage({ params }: { params: { id: string } })
           </div>
           <div className="card-body">
             <SecuritySearchInput
-              onSelect={(s: IndianStock) => setForm(f => ({ ...f, ticker_symbol: s.symbol, currency_code: 'INR' }))}
+              onSelect={(s: SearchResult) => setForm(f => ({ ...f, ticker_symbol: s.symbol, currency_code: 'INR' }))}
               placeholder="Search to change ticker / currency…"
             />
             <div className="text-xs text-muted mt-2">Current ticker: <code>{form.ticker_symbol || '(none)'}</code> · {form.currency_code}</div>
