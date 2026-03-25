@@ -5,12 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const TX_TYPES = [
-  { value: 'BUY',      label: 'Purchase',       color: '#22c55e' },
-  { value: 'SELL',     label: 'Sale',            color: '#ef4444' },
-  { value: 'INTEREST', label: 'Rental Income',  color: '#3b82f6' },
-  { value: 'BUY',     label: 'Capital Expense',  color: '#f59e0b' },
-]
+
 
 const PROPERTY_TYPES = [
   'Residential Apartment', 'Independent House / Villa', 'Plot / Land',
@@ -21,11 +16,11 @@ const fmt = (n: number, currency = 'INR') =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(n)
 
 const RE_TYPES = [
-  { value: 'BUY',      label: 'Purchase',        color: '#22c55e' },
-  { value: 'SELL',     label: 'Sale',             color: '#ef4444' },
-  { value: 'INTEREST', label: 'Rental Income',   color: '#3b82f6' },
-  { value: 'DELIVERY_INBOUND', label: 'Capital Expense', color: '#f59e0b' },
-  { value: 'TRANSFER_IN', label: 'Mortgage Payment', color: '#8b5cf6' },
+  { value: 'BUY',              label: 'Purchase',         color: '#22c55e' },
+  { value: 'SELL',             label: 'Sale',             color: '#ef4444' },
+  { value: 'INTEREST',         label: 'Rental Income',    color: '#3b82f6' },
+  { value: 'DELIVERY_INBOUND', label: 'Capital Expense',  color: '#f59e0b' },
+  { value: 'TRANSFER_IN',      label: 'Mortgage Payment', color: '#8b5cf6' },
 ]
 
 interface RESec { id: string; name: string; currency: string }

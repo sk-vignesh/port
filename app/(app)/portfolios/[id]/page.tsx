@@ -5,6 +5,7 @@ import { PORTFOLIO_TX_LABELS } from '@/lib/format'
 import PortfolioPerformancePanel from '@/components/PortfolioPerformancePanel'
 import PortfolioDetailClient from '@/components/PortfolioDetailClient'
 import FDCard from '@/components/FDCard'
+import PropertyCard from '@/components/PropertyCard'
 import type { PortfolioTxRow } from '@/components/grids/PortfolioTransactionsGrid'
 import type { FDTransaction } from '@/lib/fd'
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,38 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
           })
       : []
 
+  // ── Real Estate property aggregation (REAL_ESTATE portfolios only) ──
+  interface AggregatedProperty {
+    securityId:   string
+    name:         string
+    purchaseCost: number
+    stampDuty:    number   // TODO: fetch from portfolio_transaction_units in a follow-up
+    area:         number | null
+    annualRental: number
+    currentValue: number | null
+  }
+  const rePropMap = new Map<string, AggregatedProperty>()
+  if (assetClass === 'REAL_ESTATE') {
+    const THIS_YEAR = new Date().getFullYear()
+    for (const tx of transactions ?? []) {
+      const rawTx = tx as unknown as { area?: number | null; securities?: { id?: string; name?: string } | null }
+      const secId  = (tx.securities as unknown as { id?: string } | null)?.id ?? tx.security_id ?? 'unknown'
+      const secName = (tx.securities as unknown as { name?: string } | null)?.name ?? 'Property'
+      if (!rePropMap.has(secId)) {
+        rePropMap.set(secId, { securityId: secId, name: secName, purchaseCost: 0, stampDuty: 0, area: null, annualRental: 0, currentValue: null })
+      }
+      const p = rePropMap.get(secId)!
+      if ((tx.type as string) === 'BUY') {
+        p.purchaseCost += tx.amount ?? 0
+        if (!p.area && rawTx.area) p.area = rawTx.area
+      }
+      if ((tx.type as string) === 'INTEREST' && new Date(tx.date).getFullYear() === THIS_YEAR) {
+        p.annualRental += tx.amount ?? 0
+      }
+    }
+  }
+  const reTxns = [...rePropMap.values()].filter(p => p.purchaseCost > 0)
+
   return (
     <>
       <div className="page-header flex-between">
@@ -105,6 +138,34 @@ export default async function PortfolioDetailPage({ params }: { params: { id: st
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
             {fdTxns.map((tx, i) => (
               <FDCard key={i} tx={tx} currency={currency} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Property Cards (REAL_ESTATE portfolios only) ── */}
+      {reTxns.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{
+            fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.1em', color: 'var(--color-text-muted)',
+            marginBottom: 12,
+          }}>
+            🏢 Properties
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+            {reTxns.map(p => (
+              <PropertyCard
+                key={p.securityId}
+                name={p.name}
+                securityId={p.securityId}
+                purchaseCost={p.purchaseCost}
+                currentValue={p.currentValue}
+                stampDuty={p.stampDuty}
+                area={p.area}
+                annualRental={p.annualRental}
+                currency={currency}
+              />
             ))}
           </div>
         </div>
