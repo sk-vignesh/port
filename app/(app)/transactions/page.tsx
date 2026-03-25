@@ -1,12 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { ACCOUNT_TX_LABELS, PORTFOLIO_TX_LABELS } from '@/lib/format'
-import dynamicImport from 'next/dynamic'
+import TransactionsClient from './TransactionsClient'
 import type { TxRow } from '@/components/grids/TransactionsGrid'
 export const dynamic = 'force-dynamic'
-
-const TransactionsGrid = dynamicImport(() => import('@/components/grids/TransactionsGrid'), { ssr: false })
 
 export default async function TransactionsPage() {
   const supabase = await createClient()
@@ -56,30 +53,5 @@ export default async function TransactionsPage() {
     })),
   ].sort((a, b) => b.date.localeCompare(a.date))
 
-  return (
-    <>
-      <div className="page-header flex-between">
-        <div>
-          <h1 className="page-title">Transactions</h1>
-          <p className="page-subtitle">All account and portfolio transactions · {rows.length} records</p>
-        </div>
-        <div className="flex flex-gap-3">
-          <Link href="/accounts"   className="btn btn-secondary btn-sm">Account Transaction</Link>
-          <Link href="/portfolios" className="btn btn-primary btn-sm">Portfolio Trade</Link>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: '16px 20px' }}>
-        {rows.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
-            <div className="empty-state-title">No transactions yet</div>
-            <div className="empty-state-text">Add an account deposit or a portfolio trade to get started.</div>
-          </div>
-        ) : (
-          <TransactionsGrid rows={rows} />
-        )}
-      </div>
-    </>
-  )
+  return <TransactionsClient rows={rows} />
 }
