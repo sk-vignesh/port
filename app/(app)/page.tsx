@@ -6,11 +6,9 @@ import { buildHoldings, enrichHoldings } from '@/lib/performance'
 import SampleDataBanner from '@/components/SampleDataBanner'
 import DashboardCharts from '@/components/DashboardCharts'
 import MyIndexChart from '@/components/MyIndexChart'
-export const dynamic = 'force-dynamic'
+import { ASSET_CLASS_ICONS } from '@/lib/assetClasses'
 
-const ASSET_CLASS_ICONS: Record<string, string> = {
-  EQUITY: '📈', COMMODITY: '🥇', FIXED_INCOME: '🏦', REAL_ESTATE: '🏠',
-}
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const supabase = await createClient()

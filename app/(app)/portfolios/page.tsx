@@ -3,21 +3,9 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { buildHoldings, enrichHoldings } from '@/lib/performance'
 import { formatAmount, formatPercent } from '@/lib/format'
+import { ASSET_CLASS_ICONS, ASSET_CLASS_LABELS } from '@/lib/assetClasses'
+
 export const dynamic = 'force-dynamic'
-
-const ASSET_CLASS_ICONS: Record<string, string> = {
-  EQUITY:       '📈',
-  COMMODITY:    '🥇',
-  FIXED_INCOME: '🏦',
-  REAL_ESTATE:  '🏠',
-}
-
-const ASSET_CLASS_LABELS: Record<string, string> = {
-  EQUITY:       'Stocks & ETFs',
-  COMMODITY:    'Commodities',
-  FIXED_INCOME: 'Fixed Income',
-  REAL_ESTATE:  'Real Estate',
-}
 
 export default async function PortfoliosPage() {
   const supabase = await createClient()

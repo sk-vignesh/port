@@ -3,18 +3,11 @@
 import { useState } from 'react'
 import type { HoldingRow } from '@/components/grids/HoldingsGrid'
 import dynamic from 'next/dynamic'
-import { formatAmount, formatPercent } from '@/lib/format'
+import { formatAmount } from '@/lib/format'
 import Link from 'next/link'
+import { ASSET_CLASS_ICONS, ASSET_CLASS_LABELS } from '@/lib/assetClasses'
 
 const HoldingsGrid = dynamic(() => import('@/components/grids/HoldingsGrid'), { ssr: false })
-
-const ASSET_CLASS_ICONS: Record<string, string> = {
-  EQUITY: '📈', COMMODITY: '🥇', FIXED_INCOME: '🏦', REAL_ESTATE: '🏠',
-}
-const ASSET_CLASS_LABELS: Record<string, string> = {
-  EQUITY: 'Stocks & ETFs', COMMODITY: 'Commodities',
-  FIXED_INCOME: 'Fixed Income / Bonds', REAL_ESTATE: 'Real Estate',
-}
 
 export interface HoldingRowWithClass extends HoldingRow {
   assetClass: string | null

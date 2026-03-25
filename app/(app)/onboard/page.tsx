@@ -3,15 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 
-const ASSET_CLASSES = [
-  { id: 'EQUITY',       icon: '📈', label: 'Stocks & ETFs',   desc: 'NSE / BSE listed shares, mutual funds, ETFs' },
-  { id: 'FIXED_INCOME', icon: '🏦', label: 'Fixed Income',    desc: 'Fixed Deposits, Bonds, PPF, NSC, Debentures' },
-  { id: 'COMMODITY',    icon: '🥇', label: 'Commodities',     desc: 'Gold, Silver, Oil — physical or via ETF' },
-  { id: 'REAL_ESTATE',  icon: '🏠', label: 'Real Estate',     desc: 'Property: residential, commercial, REITs' },
-]
-
-const STEPS = ['What do you invest in?', 'Name your first portfolio', 'You\'re ready!']
+const STEPS = ['What do you invest in?', 'Name your portfolio', 'You\'re ready!']
 
 export default function OnboardingWizard() {
   const router = useRouter()
@@ -29,7 +23,7 @@ export default function OnboardingWizard() {
 
   const handleCreate = async () => {
     if (!selectedClasses.length) { setError('Pick at least one asset class'); return }
-    const name = portfolioName.trim() || (ASSET_CLASSES.find(a => a.id === selectedClasses[0])?.label ?? 'My Portfolio')
+    const name = portfolioName.trim() || (ASSET_CLASS_LIST.find(a => a.id === selectedClasses[0])?.label ?? 'My Portfolio')
     setLoading(true); setError(null)
     try {
       const res = await fetch('/api/portfolios', {
@@ -94,7 +88,7 @@ export default function OnboardingWizard() {
                 Select all that apply — you can add more asset classes later.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {ASSET_CLASSES.map(ac => {
+                {ASSET_CLASS_LIST.map(ac => {
                   const sel = selectedClasses.includes(ac.id)
                   return (
                     <button key={ac.id} onClick={() => toggle(ac.id)} style={{
@@ -131,14 +125,14 @@ export default function OnboardingWizard() {
             <>
               <h2 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: 6 }}>Name your portfolio</h2>
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem', marginBottom: 24 }}>
-                We'll create one portfolio for <strong>{ASSET_CLASSES.find(a => a.id === selectedClasses[0])?.label}</strong> to start. You can add more later.
+                We'll create one portfolio for <strong>{ASSET_CLASS_LIST.find(a => a.id === selectedClasses[0])?.label}</strong> to start. You can add more later.
               </p>
               <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6 }}>
                 Portfolio name
               </label>
               <input
                 type="text" autoFocus
-                placeholder={ASSET_CLASSES.find(a => a.id === selectedClasses[0])?.label ?? 'My Portfolio'}
+                placeholder={ASSET_CLASS_LIST.find(a => a.id === selectedClasses[0])?.label ?? 'My Portfolio'}
                 value={portfolioName}
                 onChange={e => setPortfolioName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleCreate()}
