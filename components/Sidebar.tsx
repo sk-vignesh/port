@@ -26,30 +26,35 @@ const IconWrap = ({ color, children }: { color: string; children: React.ReactNod
 
 const navItems = [
   {
-    label: 'Overview',
+    label: 'My Money',
     items: [
-      { href: '/',          label: 'Dashboard',    icon: <LayoutDashboard size={15} />,    color: '#3b82f6' },
-      { href: '/accounts',  label: 'Accounts',     icon: <Wallet size={15} />,             color: '#14b8a6' },
-      { href: '/holdings',  label: 'All Holdings', icon: <Layers size={15} />,             color: '#8b5cf6' },
+      { href: '/',         label: 'Dashboard',    icon: <LayoutDashboard size={15} />, color: '#3b82f6' },
+      { href: '/holdings', label: 'All Holdings', icon: <Layers size={15} />,          color: '#8b5cf6' },
+      { href: '/gains',    label: 'Gains & P&L',  icon: <TrendingUp size={15} />,      color: '#22c55e' },
     ],
   },
   {
     label: 'Activity',
     items: [
-      { href: '/transactions', label: 'Transactions', icon: <ArrowLeftRight size={15} />, color: '#a855f7' },
-      { href: '/plans',        label: 'Plans',         icon: <CalendarClock size={15} />,  color: '#f59e0b' },
-      { href: '/import',       label: 'Import',        icon: <Upload size={15} />,         color: '#22c55e' },
+      { href: '/transactions', label: 'Trades',  icon: <ArrowLeftRight size={15} />, color: '#f59e0b' },
+      { href: '/plans',        label: 'SIP Plans', icon: <CalendarClock size={15} />,  color: '#a855f7' },
+      { href: '/import',       label: 'Import',  icon: <Upload size={15} />,          color: '#14b8a6' },
     ],
   },
   {
-    label: 'Analysis',
+    label: 'Research',
     items: [
-      { href: '/gains',      label: 'Gains & P&L',  icon: <TrendingUp size={15} />,  color: '#f59e0b' },
-      { href: '/market',     label: 'Market',        icon: <Activity size={15} />,    color: '#10b981' },
-      { href: '/reports',    label: 'Reports',       icon: <BarChart3 size={15} />,   color: '#f97316' },
-      { href: '/watchlists', label: 'Watchlists',    icon: <Star size={15} />,        color: '#ec4899' },
-      { href: '/taxonomies', label: 'Segments',      icon: <Layers size={15} />,      color: '#6366f1' },
-      { href: '/help',       label: 'Help Centre',   icon: <HelpCircle size={15} />,  color: '#64748b' },
+      { href: '/market',     label: 'Market',     icon: <Activity size={15} />,    color: '#10b981' },
+      { href: '/watchlists', label: 'Watchlists', icon: <Star size={15} />,        color: '#ec4899' },
+      { href: '/reports',    label: 'Reports',    icon: <BarChart3 size={15} />,   color: '#f97316' },
+    ],
+  },
+  {
+    label: 'Setup',
+    items: [
+      { href: '/accounts',   label: 'Accounts',  icon: <Wallet size={15} />,       color: '#64748b' },
+      { href: '/taxonomies', label: 'Segments',  icon: <Layers size={15} />,       color: '#6366f1' },
+      { href: '/help',       label: 'Help Centre', icon: <HelpCircle size={15} />, color: '#64748b' },
     ],
   },
 ]

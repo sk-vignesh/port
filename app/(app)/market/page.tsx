@@ -33,7 +33,7 @@ export default async function MarketPage() {
             <div className="empty-state-icon">📡</div>
             <div className="empty-state-title">No price data yet</div>
             <div className="empty-state-text">
-              Trigger the <strong>NSE EOD Price Fetch</strong> workflow in GitHub Actions to load market data.
+              Market price data updates automatically each evening. Check back after market hours.
             </div>
           </div>
         </div>
@@ -88,8 +88,8 @@ export default async function MarketPage() {
             <div className="empty-state-title">No records for {fmtDate(latestDate)}</div>
             <div className="empty-state-text">
               {errMsg
-                ? `Query error: ${errMsg}`
-                : 'Re-run the NSE EOD Price Fetch workflow to reload market data.'}
+                ? 'Market data could not be loaded. Please try again shortly.'
+                : 'Price data is refreshed automatically each trading day. Check back after market hours.'}
             </div>
           </div>
         </div>
