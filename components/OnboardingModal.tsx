@@ -10,6 +10,7 @@
 import { useState, useCallback } from 'react'
 import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 import { createClient } from '@/lib/supabase/client'
+import SecuritySearchInput, { SearchResult } from '@/components/SecuritySearchInput'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Path   = 'cas' | 'csv' | 'manual' | null
@@ -32,12 +33,10 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const [errMsg, setErrMsg] = useState('')
 
   // Manual path state
-  const [query, setQuery]      = useState('')
-  const [results, setResults]  = useState<{ symbol: string; name: string }[]>([])
-  const [picked, setPicked]    = useState<{ symbol: string; name: string } | null>(null)
-  const [units, setUnits]      = useState('')
-  const [price, setPrice]      = useState('')
-  const [date,  setDate]       = useState(new Date().toISOString().split('T')[0])
+  const [picked, setPicked] = useState<SearchResult | null>(null)
+  const [units, setUnits]   = useState('')
+  const [price, setPrice]   = useState('')
+  const [date,  setDate]    = useState(new Date().toISOString().split('T')[0])
 
   // CAS path state
   const [casFile, setCasFile]     = useState<File | null>(null)
@@ -52,18 +51,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     onComplete()
   }, [onComplete])
 
-  // NSE stock search (reuse existing /api/securities/search endpoint pattern)
-  const searchStocks = async (q: string) => {
-    setQuery(q)
-    setPicked(null)
-    if (q.length < 2) { setResults([]); return }
-    const { data } = await supabase
-      .from('price_history')
-      .select('symbol, name')
-      .or(`symbol.ilike.${q}%,name.ilike.%${q}%`)
-      .limit(8)
-    setResults((data as { symbol: string; name: string }[]) ?? [])
-  }
+  // NSE stock search handled by SecuritySearchInput component
 
   // Manual submit — creates security + BUY transaction using defaults
   const submitManual = async () => {
@@ -237,31 +225,60 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 20 }}>
             We'll add it to your default Stocks portfolio automatically.
           </p>
-          {/* Stock search */}
-          <div style={{ position: 'relative', marginBottom: 14 }}>
-            <input
-              type="text" placeholder="Search stock or ETF (e.g. RELIANCE, Nifty 50)"
-              value={picked ? `${picked.symbol} — ${picked.name}` : query}
-              onChange={e => { setPicked(null); searchStocks(e.target.value) }}
-              style={inputStyle}
-            />
-            {results.length > 0 && !picked && (
+
+          {/* Stock search — uses SecuritySearchInput with dark-theme overrides */}
+          <style>{`
+            .onb-search .search-container { position: relative; }
+            .onb-search input {
+              background: rgba(255,255,255,0.08) !important;
+              border: 1px solid rgba(255,255,255,0.2) !important;
+              color: white !important;
+              border-radius: 10px !important;
+            }
+            .onb-search input::placeholder { color: rgba(255,255,255,0.4) !important; }
+            .onb-search [role="listbox"], .onb-search [class*="results"], .onb-search ul {
+              background: #1e2035 !important;
+              border: 1px solid rgba(255,255,255,0.15) !important;
+            }
+            .onb-search [role="option"], .onb-search li {
+              color: white !important;
+            }
+            .onb-search [role="option"]:hover, .onb-search li:hover {
+              background: rgba(255,255,255,0.08) !important;
+            }
+          `}</style>
+
+          <div className="onb-search" style={{ marginBottom: 14 }}>
+            {picked ? (
               <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                background: '#1e2035', border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 10, marginTop: 4, maxHeight: 200, overflowY: 'auto',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 14px', borderRadius: 10,
+                border: '1px solid rgba(99,102,241,0.5)', background: 'rgba(99,102,241,0.12)',
               }}>
-                {results.map(r => (
-                  <button key={r.symbol} onClick={() => { setPicked(r); setResults([]); setQuery('') }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px',
-                      background: 'none', border: 'none', cursor: 'pointer', color: 'white',
-                      borderBottom: '1px solid rgba(255,255,255,0.07)', fontSize: '0.85rem' }}>
-                    <strong>{r.symbol}</strong> <span style={{ color: 'rgba(255,255,255,0.55)' }}>{r.name}</span>
-                  </button>
-                ))}
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{picked.symbol}</span>
+                  {' '}
+                  <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem' }}>{picked.name}</span>
+                  {picked.sector && (
+                    <span style={{
+                      marginLeft: 8, fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4,
+                      background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)',
+                    }}>{picked.sector}</span>
+                  )}
+                </div>
+                <button onClick={() => setPicked(null)} style={{
+                  background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer', fontSize: '1rem', padding: '0 4px',
+                }}>✕</button>
               </div>
+            ) : (
+              <SecuritySearchInput
+                onSelect={(r) => setPicked(r)}
+                placeholder="Search: Reliance, TCS, HDFC Bank, Nifty BeES…"
+              />
             )}
           </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
             <div>
               <label style={labelStyle}>Units</label>
