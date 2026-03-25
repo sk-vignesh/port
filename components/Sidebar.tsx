@@ -16,7 +16,7 @@ interface Portfolio { id: string; name: string }
 const IconWrap = ({ color, children }: { color: string; children: React.ReactNode }) => (
   <span style={{
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: 30, height: 30, borderRadius: 8,
+    width: 26, height: 26, borderRadius: 7,
     background: `${color}22`, flexShrink: 0,
     color,
   }}>
@@ -90,7 +90,7 @@ export default function Sidebar() {
     return (
       <Link href={href} style={{
               display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10,
-        padding: collapsed ? '7px 0' : '7px 10px', borderRadius: 8,
+        padding: collapsed ? '5px 0' : '5px 8px', borderRadius: 7,
         background: active ? `${color}18` : 'transparent',
         border: active ? `1px solid ${color}30` : '1px solid transparent',
         color: active ? color : 'var(--color-text-secondary)',
@@ -122,8 +122,8 @@ export default function Sidebar() {
       {/* Logo */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        height: 56,
-        padding: collapsed ? '0' : '0 16px',
+        height: 48,
+        padding: collapsed ? '0' : '0 14px',
         borderBottom: '1px solid var(--color-border)',
         justifyContent: collapsed ? 'center' : 'flex-start',
         flexShrink: 0,
@@ -138,7 +138,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: collapsed ? '12px 8px' : '12px 10px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: collapsed ? '10px 6px' : '10px 8px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Portfolios — dynamic section */}
         <div>
@@ -147,8 +147,8 @@ export default function Sidebar() {
               onClick={() => setPortOpen(v => !v)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '2px 6px 6px', cursor: 'pointer',
-                fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
+                padding: '0px 4px 4px', cursor: 'pointer',
+                fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase',
                 letterSpacing: '0.1em', color: 'var(--color-text-muted)',
               }}>
               <span>Asset Classes</span>
@@ -194,11 +194,11 @@ export default function Sidebar() {
           <div key={group.label}>
             {!collapsed && (
               <div style={{
-                padding: '2px 6px 6px', fontSize: '0.65rem', fontWeight: 700,
+                padding: '0 4px 4px', fontSize: '0.6rem', fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-muted)',
               }}>{group.label}</div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {group.items.map(item => (
                 <NavLink key={item.href} {...item} />
               ))}
