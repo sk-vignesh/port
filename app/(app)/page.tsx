@@ -8,6 +8,7 @@ import DashboardCharts from '@/components/DashboardCharts'
 import MyIndexChart from '@/components/MyIndexChart'
 import { ASSET_CLASS_ICONS } from '@/lib/assetClasses'
 import DashboardTradeButton from '@/components/DashboardTradeButton'
+import PerformerCards from '@/components/PerformerCards'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,6 +97,9 @@ export default async function DashboardPage() {
   return (
     <>
       {!accounts?.length && !portfolios?.length && <SampleDataBanner />}
+
+      {/* ── Best / Worst Performer Cards (lazy, client-only) ── */}
+      {hasData && <PerformerCards />}
 
       {/* ── Hero ── */}
       <div style={{

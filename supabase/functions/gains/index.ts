@@ -86,8 +86,10 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 5. Realised P&L (average-cost release) ─────────────────────────────────
-  const realizedMap = new Map<string, number>()
-  const runState    = new Map<string, { shares: number; costBasis: number }>()
+  const realizedMap    = new Map<string, number>()
+  const runState        = new Map<string, { shares: number; costBasis: number }>()
+  // Per-security cashflow series for XIRR (outflows = buys, inflows = sells)
+  const cashflowMap    = new Map<string, Array<{ date: string; amount: number }>>()
 
   const BUY  = new Set(['BUY', 'DELIVERY_INBOUND',  'TRANSFER_IN'])
   const SELL = new Set(['SELL', 'DELIVERY_OUTBOUND', 'TRANSFER_OUT'])
@@ -102,6 +104,9 @@ Deno.serve(async (req: Request) => {
     if (isBuy) {
       s.shares    += tx.shares ?? 0
       s.costBasis += tx.amount ?? 0
+      // Record outflow (negative) for XIRR
+      if (!cashflowMap.has(tx.security_id)) cashflowMap.set(tx.security_id, [])
+      cashflowMap.get(tx.security_id)!.push({ date: tx.date, amount: -(tx.amount ?? 0) })
     } else if (isSell && s.shares > 0) {
       const frac        = (tx.shares ?? 0) / s.shares
       const released    = Math.round(s.costBasis * frac)
@@ -109,8 +114,46 @@ Deno.serve(async (req: Request) => {
       realizedMap.set(tx.security_id, (realizedMap.get(tx.security_id) ?? 0) + gain)
       s.costBasis -= released
       s.shares    -= tx.shares ?? 0
+      // Record inflow (positive) for XIRR
+      if (!cashflowMap.has(tx.security_id)) cashflowMap.set(tx.security_id, [])
+      cashflowMap.get(tx.security_id)!.push({ date: tx.date, amount: tx.amount ?? 0 })
     }
     runState.set(tx.security_id, s)
+  }
+
+  // ── 5b. Inline XIRR (Newton-Raphson) ───────────────────────────────────────
+  function _npv(rate: number, flows: Array<{ date: string; amount: number }>): number {
+    const t0 = new Date(flows[0].date).getTime()
+    return flows.reduce((sum, f) => {
+      const d = (new Date(f.date).getTime() - t0) / 86_400_000 / 365
+      return sum + f.amount / Math.pow(1 + rate, d)
+    }, 0)
+  }
+  function _dnpv(rate: number, flows: Array<{ date: string; amount: number }>): number {
+    const t0 = new Date(flows[0].date).getTime()
+    return flows.reduce((sum, f) => {
+      const d = (new Date(f.date).getTime() - t0) / 86_400_000 / 365
+      return sum - (d * f.amount) / Math.pow(1 + rate, d + 1)
+    }, 0)
+  }
+  function _xirr(flows: Array<{ date: string; amount: number }>): number | null {
+    if (flows.length < 2) return null
+    if (!flows.some(f => f.amount < 0) || !flows.some(f => f.amount > 0)) return null
+    let r = 0.1
+    for (let i = 0; i < 150; i++) {
+      const f = _npv(r, flows), df = _dnpv(r, flows)
+      if (Math.abs(df) < 1e-14) return null
+      const next = r - f / df
+      if (Math.abs(next - r) < 1e-8) return next
+      r = Math.max(-0.9999, Math.min(100, next))
+    }
+    return null
+  }
+  function _cagr(start: number, end: number, startDate: string, endDate: string): number | null {
+    if (start <= 0 || end <= 0) return null
+    const years = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86_400_000 / 365
+    if (years <= 0) return null
+    return Math.pow(end / start, 1 / years) - 1
   }
 
   // ── 6. Build response ───────────────────────────────────────────────────────
@@ -124,6 +167,18 @@ Deno.serve(async (req: Request) => {
     const unrealizedPct  = unrealizedGain != null && h.costBasis > 0
       ? unrealizedGain / h.costBasis : null
     const realizedGain   = realizedMap.get(h.securityId) ?? 0
+
+    // XIRR: add current value as terminal inflow, then compute
+    const flows = cashflowMap.get(h.securityId) ?? []
+    const today = new Date().toISOString().slice(0, 10)
+    let xirrVal: number | null = null
+    let cagrVal: number | null = null
+    if (currentValue != null && currentValue > 0 && flows.length > 0) {
+      const terminalFlows = [...flows, { date: today, amount: currentValue }]
+      xirrVal = _xirr(terminalFlows)
+      const firstBuyDate = flows[0]?.date
+      if (firstBuyDate) cagrVal = _cagr(h.costBasis, currentValue, firstBuyDate, today)
+    }
 
     return {
       securityId:        h.securityId,
@@ -139,6 +194,8 @@ Deno.serve(async (req: Request) => {
       unrealizedGainPct: unrealizedPct,
       realizedGain,
       totalGain:         (unrealizedGain ?? 0) + realizedGain,
+      xirr:              xirrVal,
+      cagr:              cagrVal,
     }
   })
 

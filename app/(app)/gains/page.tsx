@@ -20,6 +20,8 @@ interface GainRow {
   unrealizedGainPct: number | null
   realizedGain:      number   // × 100
   totalGain:         number   // × 100
+  xirr:              number | null   // decimal, e.g. 0.1547 = 15.47%
+  cagr:              number | null   // decimal, e.g. 0.2247 = 22.47%
 }
 
 interface Summary {
@@ -54,7 +56,7 @@ function FmtAmount({ value, currency }: { value: number | null; currency?: strin
 }
 
 // ── Sort keys ──────────────────────────────────────────────────────────────
-type SortKey = 'name' | 'shares' | 'costBasis' | 'currentValue' | 'unrealizedGain' | 'unrealizedGainPct' | 'realizedGain' | 'totalGain'
+type SortKey = 'name' | 'shares' | 'costBasis' | 'currentValue' | 'unrealizedGain' | 'unrealizedGainPct' | 'realizedGain' | 'totalGain' | 'xirr' | 'cagr'
 
 export default function GainsPage() {
   const [rows,    setRows]    = useState<GainRow[]>([])
@@ -232,6 +234,8 @@ export default function GainsPage() {
                   <SortTh colKey="unrealizedGainPct"label="Unreal. %"      right />
                   <SortTh colKey="realizedGain"     label="Real. Gain"     right />
                   <SortTh colKey="totalGain"        label="Total Gain"     right />
+                  <SortTh colKey="xirr"             label="XIRR"           right />
+                  <SortTh colKey="cagr"             label="CAGR"           right />
                 </tr>
               </thead>
               <tbody>
@@ -310,6 +314,24 @@ export default function GainsPage() {
                       <span style={{ fontWeight: 700, color: gainColor(row.totalGain) }}>
                         {row.totalGain >= 0 ? '+' : ''}{formatAmount(row.totalGain, row.currency)}
                       </span>
+                    </td>
+
+                    {/* XIRR */}
+                    <td className="table-right">
+                      {row.xirr != null
+                        ? <span style={{ fontWeight: 600, color: gainColor(row.xirr) }}>
+                            {row.xirr >= 0 ? '+' : ''}{(row.xirr * 100).toFixed(2)}%
+                          </span>
+                        : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+                    </td>
+
+                    {/* CAGR */}
+                    <td className="table-right">
+                      {row.cagr != null
+                        ? <span style={{ fontWeight: 600, color: gainColor(row.cagr) }}>
+                            {row.cagr >= 0 ? '+' : ''}{(row.cagr * 100).toFixed(2)}%
+                          </span>
+                        : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
                     </td>
                   </tr>
                 ))}
