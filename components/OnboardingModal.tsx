@@ -144,46 +144,41 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
 
     // Slide 0 — Welcome
     <div key="welcome" style={{ textAlign: 'center', width: '100%' }}>
-      {/* Large portrait — feels like a real person welcoming you */}
+      {/* Large portrait */}
       <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
-        {/* Soft glowing halo behind the person */}
         <div style={{
           position: 'absolute', inset: 0, borderRadius: '50%', margin: '10%',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%)',
-          filter: 'blur(20px)',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)',
+          filter: 'blur(24px)',
         }} />
         <img
           src="/onboarding/welcome.png"
-          alt="Hi, I'm Priya — your guide at Apna Stocks"
+          alt="Welcome to Apna Stocks"
           style={{
-            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
-            borderRadius: 24,
-            boxShadow: '0 20px 60px rgba(99,102,241,0.3), 0 4px 16px rgba(0,0,0,0.5)',
+            width: 260, height: 310, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 28,
+            boxShadow: '0 24px 70px rgba(99,102,241,0.35), 0 4px 20px rgba(0,0,0,0.5)',
             animation: 'floatY 4s ease-in-out infinite',
             display: 'block',
           }}
         />
-        {/* Name badge */}
-        <div style={{
-          position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(99,102,241,0.4)',
-          borderRadius: 20, padding: '5px 14px', fontSize: '0.72rem', fontWeight: 700,
-          color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap',
-          backdropFilter: 'blur(8px)',
-        }}>
-          👋 Priya · Your Guide
-        </div>
       </div>
-      <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, marginTop: 14 }}>
+      <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, marginTop: 4 }}>
         Welcome to Apna Stocks
       </h1>
       <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', lineHeight: 1.65, maxWidth: 380, margin: '0 auto 20px' }}>
-        I'll walk you through setting up your portfolio — it takes less than a minute.
+        Your complete investment picture — one beautiful dashboard for every rupee you own.
       </p>
-      <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 24, fontSize: '1.5rem' }}>
+      {/* Asset class chips — icon + label, nothing hidden */}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
         {ASSET_CLASS_LIST.map(ac => (
-          <div key={ac.id} title={ac.label} style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}>
-            {ac.icon}
+          <div key={ac.id} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: 20, padding: '6px 12px',
+          }}>
+            <span style={{ fontSize: '1rem' }}>{ac.icon}</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>{ac.label}</span>
           </div>
         ))}
       </div>
