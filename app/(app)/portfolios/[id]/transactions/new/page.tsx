@@ -5,10 +5,11 @@ import TradeFormRouter from './TradeFormRouter'
 export const dynamic = 'force-dynamic'
 
 const ASSET_CLASS_META: Record<string, { label: string; icon: string; subtitle: string }> = {
-  EQUITY:       { label: 'Equity Trade',       icon: '📈', subtitle: 'Stocks, ETFs, Mutual Funds' },
-  COMMODITY:    { label: 'Commodity Trade',     icon: '🥇', subtitle: 'Gold, Silver, Oil and other commodities' },
-  FIXED_INCOME: { label: 'Fixed Income Entry',  icon: '🏦', subtitle: 'FDs, Bonds, PPF, NSC and debt instruments' },
-  REAL_ESTATE:  { label: 'Real Estate Entry',   icon: '🏠', subtitle: 'Property purchase, sale, rental income' },
+  EQUITY:       { label: 'Equity Trade',       icon: '💹', subtitle: 'Stocks, ETFs — NSE / BSE listed' },
+  MUTUAL_FUND:  { label: 'Mutual Fund Entry',  icon: '📊', subtitle: 'SIP, lump sum purchase, or redemption' },
+  COMMODITY:    { label: 'Commodity Trade',     icon: '🪙', subtitle: 'Gold, Silver, Oil and other commodities' },
+  FIXED_INCOME: { label: 'Fixed Income Entry',  icon: '📑', subtitle: 'FDs, Bonds, PPF, NSC and debt instruments' },
+  REAL_ESTATE:  { label: 'Real Estate Entry',   icon: '🏢', subtitle: 'Property purchase, sale, rental income' },
 }
 
 export default async function NewPortfolioTransactionPage({
