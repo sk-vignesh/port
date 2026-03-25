@@ -26,7 +26,10 @@ export default async function DashboardPage() {
   ])
 
   const baseCurrency = settings?.base_currency ?? 'INR'
-  type Portfolio = { id: string; name: string; is_retired: boolean; asset_class: string | null }
+  // Supabase types don't yet include asset_class (added in migration 009).
+  // Cast is safe: query explicitly selects asset_class, default 'EQUITY' on new rows.
+  // Remove once types are regenerated after migration 009 is applied.
+  type Portfolio = { id: string; name: string; is_retired: boolean; asset_class: string }
   const portfolioList = (portfolios as unknown as Portfolio[] | null) ?? []
   const portfolioIds = portfolioList.map(p => p.id)
   const accountIds   = (accounts ?? []).map(a => a.id)

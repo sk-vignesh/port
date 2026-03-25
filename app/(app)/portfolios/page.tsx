@@ -20,9 +20,10 @@ export default async function PortfoliosPage() {
     .select('id, name, is_retired, note, asset_class, updated_at')
     .order('name')
 
+  // Supabase types don't yet include asset_class (added in migration 009). Safe at runtime.
   const portfolioList = (portfolios as unknown as Array<{
     id: string; name: string; is_retired: boolean; note: string | null;
-    asset_class: string | null; updated_at: string
+    asset_class: string; updated_at: string
   }> ?? [])
 
   if (!portfolioList.length) {

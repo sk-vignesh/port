@@ -16,10 +16,10 @@ export default async function AllHoldingsPage() {
 
   // Fetch all active portfolios with asset_class
   const { data: portfoliosRaw } = await supabase
-    .from('portfolios').select('id, name, is_retired')
+    .from('portfolios').select('id, name, is_retired, asset_class')
     .eq('is_retired', false).order('name')
 
-  type Portfolio = { id: string; name: string; asset_class: string | null }
+  type Portfolio = { id: string; name: string; is_retired: boolean; asset_class: string }
   const portfolios = (portfoliosRaw as unknown as Portfolio[] | null) ?? []
   const portfolioIds = portfolios.map(p => p.id)
 
