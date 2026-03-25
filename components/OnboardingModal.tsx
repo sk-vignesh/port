@@ -143,59 +143,92 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const slides: React.ReactNode[] = [
 
     // Slide 0 — Welcome
-    <div key="welcome" style={{ textAlign: 'center' }}>
-      {/* Guide character */}
-      <div style={{ position: 'relative', marginBottom: 8 }}>
+    <div key="welcome" style={{ textAlign: 'center', width: '100%' }}>
+      {/* Large portrait — feels like a real person welcoming you */}
+      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 20 }}>
+        {/* Soft glowing halo behind the person */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '50%', margin: '10%',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%)',
+          filter: 'blur(20px)',
+        }} />
         <img
           src="/onboarding/welcome.png"
-          alt="Your friendly guide"
+          alt="Hi, I'm Priya — your guide at Apna Stocks"
           style={{
-            width: 160, height: 160, objectFit: 'contain',
-            filter: 'drop-shadow(0 8px 24px rgba(99,102,241,0.4))',
-            animation: 'floatY 3s ease-in-out infinite',
+            width: 220, height: 260, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 24,
+            boxShadow: '0 20px 60px rgba(99,102,241,0.3), 0 4px 16px rgba(0,0,0,0.5)',
+            animation: 'floatY 4s ease-in-out infinite',
+            display: 'block',
           }}
         />
+        {/* Name badge */}
+        <div style={{
+          position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(99,102,241,0.4)',
+          borderRadius: 20, padding: '5px 14px', fontSize: '0.72rem', fontWeight: 700,
+          color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap',
+          backdropFilter: 'blur(8px)',
+        }}>
+          👋 Priya · Your Guide
+        </div>
       </div>
-      <h1 style={{ fontSize: '1.7rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 10 }}>
+      <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, marginTop: 14 }}>
         Welcome to Apna Stocks
       </h1>
-      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem', lineHeight: 1.65, maxWidth: 400, margin: '0 auto 24px' }}>
-        Your complete investment picture — stocks, mutual funds, gold,
-        fixed deposits, and real estate — all in one place.
+      <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', lineHeight: 1.65, maxWidth: 380, margin: '0 auto 20px' }}>
+        I'll walk you through setting up your portfolio — it takes less than a minute.
       </p>
-      {/* Asset class icons ticker */}
-      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 28, fontSize: '1.6rem' }}>
+      <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 24, fontSize: '1.5rem' }}>
         {ASSET_CLASS_LIST.map(ac => (
           <div key={ac.id} title={ac.label} style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}>
             {ac.icon}
           </div>
         ))}
       </div>
-      <button onClick={() => setSlide(1)} style={btnPrimary}>
-        Get Started →
+      <button onClick={() => setSlide(1)} style={{ ...btnPrimary, width: '100%' }}>
+        Let's Start →
       </button>
     </div>,
 
     // Slide 1 — Features
     <div key="features" style={{ width: '100%' }}>
-      {/* Character + heading row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-        <img
-          src="/onboarding/features.png"
-          alt="Your guide explaining features"
-          style={{
-            width: 90, height: 90, objectFit: 'contain', flexShrink: 0,
-            filter: 'drop-shadow(0 4px 16px rgba(139,92,246,0.4))',
-          }}
-        />
-        <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 }}>What you get</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-            Built for Indian investors who want to see real returns
+      {/* Character + heading row — large side-by-side */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, marginBottom: 24 }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            position: 'absolute', inset: 0, margin: '5%', borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, transparent 70%)',
+            filter: 'blur(16px)',
+          }} />
+          <img
+            src="/onboarding/features.png"
+            alt="Arjun explaining features"
+            style={{
+              width: 110, height: 140, objectFit: 'cover', objectPosition: 'top',
+              borderRadius: 18,
+              boxShadow: '0 12px 40px rgba(139,92,246,0.35), 0 4px 12px rgba(0,0,0,0.4)',
+              display: 'block',
+            }}
+          />
+          <div style={{
+            position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(139,92,246,0.4)',
+            borderRadius: 20, padding: '3px 10px', fontSize: '0.65rem', fontWeight: 700,
+            color: 'rgba(255,255,255,0.9)', whiteSpace: 'nowrap',
+          }}>
+            Arjun
+          </div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: 6 }}>Here's what you get</h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', lineHeight: 1.6 }}>
+            Built for Indian investors who want to see real returns, not just paper gains
           </p>
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
         {[
           { icon: '📈', title: 'True Returns (XIRR)', body: 'Accounts for when you invested each rupee — not just simple % gain' },
           { icon: '🗂', title: 'Every Asset Class', body: 'Stocks, MFs, Gold, FDs, Real Estate — one unified view' },
@@ -422,16 +455,33 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     </div>,
 
     // Slide 4 — Done
-    <div key="done" style={{ textAlign: 'center' }}>
-      <img
-        src="/onboarding/done.png"
-        alt="Celebrating your investment journey!"
-        style={{
-          width: 150, height: 150, objectFit: 'contain', marginBottom: 8,
-          filter: 'drop-shadow(0 8px 24px rgba(34,197,94,0.35))',
-          animation: 'floatY 3s ease-in-out infinite',
-        }}
-      />
+    <div key="done" style={{ textAlign: 'center', width: '100%' }}>
+      <div style={{ position: 'relative', display: 'inline-block', marginBottom: 16 }}>
+        <div style={{
+          position: 'absolute', inset: 0, margin: '10%',
+          background: 'radial-gradient(circle, rgba(34,197,94,0.4) 0%, transparent 70%)',
+          filter: 'blur(20px)',
+        }} />
+        <img
+          src="/onboarding/done.png"
+          alt="Priya celebrating your first investment!"
+          style={{
+            width: 200, height: 240, objectFit: 'cover', objectPosition: 'top',
+            borderRadius: 24,
+            boxShadow: '0 20px 60px rgba(34,197,94,0.25), 0 4px 16px rgba(0,0,0,0.5)',
+            animation: 'floatY 4s ease-in-out infinite',
+            display: 'block',
+          }}
+        />
+        <div style={{
+          position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(30,32,58,0.95)', border: '1px solid rgba(34,197,94,0.4)',
+          borderRadius: 20, padding: '5px 14px', fontSize: '0.72rem', fontWeight: 700,
+          color: '#86efac', whiteSpace: 'nowrap',
+        }}>
+          🎉 You did it!
+        </div>
+      </div>
       <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: 10 }}>You&apos;re all set!</h2>
       {casResult && (
         <div style={{
