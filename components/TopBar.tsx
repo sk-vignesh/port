@@ -161,6 +161,23 @@ export default function TopBar({ email }: { email: string | null }) {
               >
                 <span>⚙️</span> Settings
               </Link>
+              <Link
+                href="/?wizard=1"
+                onClick={() => setProfileOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 16px',
+                  fontSize: '0.875rem',
+                  color: 'var(--color-text-primary)',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-card-hover)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>🧙</span> Setup Wizard
+              </Link>
               <button
                 onClick={signOut}
                 style={{

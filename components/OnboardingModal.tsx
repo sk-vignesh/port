@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 import { createClient } from '@/lib/supabase/client'
 import SecuritySearchInput, { SearchResult } from '@/components/SecuritySearchInput'
@@ -27,6 +28,7 @@ const Dot = ({ active, done }: { active: boolean; done: boolean }) => (
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function OnboardingModal({ onComplete }: { onComplete: () => void }) {
+  const router  = useRouter()
   const [slide, setSlide]   = useState(0)
   const [path, setPath]     = useState<Path>(null)
   const [status, setStatus] = useState<Status>('idle')
@@ -374,17 +376,22 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         <>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 6 }}>📤 Import Trade CSV</h2>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: 20 }}>
-            We'll take you to the import page. Come back here when you&apos;re done.
+            We&apos;ll mark your setup complete and take you to the import page.
           </p>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => setSlide(2)} style={btnSecondary}>← Back</button>
-            <a href="/import" style={{ ...btnPrimary, flex: 1, textDecoration: 'none', textAlign: 'center' }}
-              onClick={markComplete}>
+            <button
+              onClick={async () => {
+                await markComplete()   // wait for DB update before navigating
+                router.push('/import')
+              }}
+              style={{ ...btnPrimary, flex: 1 }}
+            >
               Go to Import →
-            </a>
+            </button>
           </div>
           <button onClick={markComplete} style={{ ...btnSecondary, width: '100%', marginTop: 10, textAlign: 'center' }}>
-            Skip — I'll do this later
+            Skip — I&apos;ll do this later
           </button>
         </>
       )}
