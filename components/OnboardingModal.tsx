@@ -303,6 +303,17 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           </button>
         ))}
       </div>
+      <button
+        onClick={markComplete}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'rgba(255,255,255,0.45)', fontSize: '0.78rem',
+          padding: '10px 0 0', width: '100%', textAlign: 'center',
+          textDecoration: 'underline', textUnderlineOffset: 3,
+        }}
+      >
+        Skip — I’ll add my investments inside the app
+      </button>
     </Panel>,
 
     // 3 — Path detail
