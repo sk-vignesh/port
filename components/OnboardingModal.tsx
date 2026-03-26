@@ -271,7 +271,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
                 <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{opt.title}</span>
                 <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#6366f1', background: 'rgba(99,102,241,0.10)', borderRadius: 6, padding: '2px 7px' }}>{opt.subtitle}</span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: '#4b5563', lineHeight: 1.5 }}>{opt.desc}</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{opt.desc}</div>
             </div>
           </button>
         ))}
@@ -284,7 +284,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         <>
           {path === 'manual' && (
             <>
-              {errMsg && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginBottom: 8 }}>{errMsg}</div>}
+              {errMsg && <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginBottom: 8 }}>{errMsg}</div>}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setSlide(2)} style={btnSecondary}>← Back</button>
                 <button onClick={submitManual} disabled={status === 'loading'} style={{ ...btnPrimary, flex: 1, opacity: status === 'loading' ? 0.7 : 1 }}>
@@ -295,7 +295,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           )}
           {path === 'cas' && (
             <>
-              {errMsg && <div style={{ color: '#dc2626', fontSize: '0.78rem', marginBottom: 8 }}>{errMsg}</div>}
+              {errMsg && <div style={{ color: '#fca5a5', fontSize: '0.78rem', marginBottom: 8 }}>{errMsg}</div>}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setSlide(2)} style={btnSecondary}>← Back</button>
                 <button onClick={submitCAS} disabled={status === 'loading' || !casFile}
@@ -405,12 +405,12 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           You&apos;re all set!
         </h2>
         {casResult && (
-          <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 12, padding: '12px 20px', marginBottom: 16, fontSize: '0.9rem', color: '#15803d', fontWeight: 600 }}>
+          <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 12, padding: '12px 20px', marginBottom: 16, fontSize: '0.9rem', color: '#4ade80', fontWeight: 600 }}>
             ✓ Imported {casResult.funds} funds · {casResult.transactions} transactions
           </div>
         )}
         {path === 'manual' && (
-          <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 12, padding: '12px 20px', marginBottom: 16, fontSize: '0.9rem', color: '#15803d', fontWeight: 600 }}>
+          <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 12, padding: '12px 20px', marginBottom: 16, fontSize: '0.9rem', color: '#4ade80', fontWeight: 600 }}>
             ✓ Your first holding has been added
           </div>
         )}
