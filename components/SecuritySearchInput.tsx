@@ -17,8 +17,6 @@ interface Props {
   lightTheme?: boolean   // use light-mode inline styles (for use on light backgrounds)
 }
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const ANON_KEY    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 const SECTOR_COLORS: Record<string, string> = {
   'IT':            '#3b82f6',
@@ -104,8 +102,7 @@ export default function SecuritySearchInput({
       setError(false)
       try {
         const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/price-search?q=${encodeURIComponent(q)}`,
-          { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } }
+          `/api/price-search?q=${encodeURIComponent(q)}`
         )
         if (res.ok) {
           const raw: Array<{
