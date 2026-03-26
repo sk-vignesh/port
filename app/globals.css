@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+/* Font is loaded by next/font/google in layout.tsx — no @import needed */
+
+/* Ensure form elements inherit the app font (they default to browser serif/sans) */
+input, button, select, textarea {
+  font-family: inherit;
+}
 
 /* ============================================================
    CSS DESIGN TOKENS
