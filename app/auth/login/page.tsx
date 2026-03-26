@@ -36,7 +36,7 @@ export default function LoginPage() {
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      <div style={{ position: 'fixed', inset: 0, zIndex: 9998, animation: 'fadeIn 0.5s ease-out', fontFamily: 'var(--font-sans, Montserrat, sans-serif)' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9998, animation: 'fadeIn 0.5s ease-out', fontFamily: "'Montserrat', sans-serif" }}>
         {/* Full-bleed background */}
         <img
           src="/onboarding/welcome.jpg"
@@ -134,5 +134,5 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 12,
   border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
   color: '#ffffff', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box',
-  fontFamily: 'var(--font-sans, Montserrat, sans-serif)',
+  fontFamily: "'Montserrat', sans-serif",
 }
