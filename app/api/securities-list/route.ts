@@ -24,9 +24,8 @@ export async function GET() {
     const { data } = await supabase
       .from('price_history')
       .select('symbol, name')
-      .not('name', 'is', null)
       .order('date', { ascending: false })
-      .limit(10000)
+      .limit(15000)
 
     if (!data) return NextResponse.json([])
 
@@ -34,11 +33,11 @@ export async function GET() {
     const seen = new Set<string>()
     const list = data
       .filter(row => {
-        if (!row.name || seen.has(row.symbol)) return false
+        if (seen.has(row.symbol)) return false
         seen.add(row.symbol)
         return true
       })
-      .map(row => ({ symbol: row.symbol, name: row.name! }))
+      .map(row => ({ symbol: row.symbol, name: row.name ?? row.symbol }))
 
     cache = { data: list, ts: Date.now() }
     return NextResponse.json(list)

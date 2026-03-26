@@ -87,9 +87,9 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const handleStockSelect = async (r: SearchResult) => {
     setPicked(r); setPriceLoading(true); setPrice('')
     const { data } = await supabase
-      .from('nse_market_data').select('close_price')
+      .from('price_history').select('close')
       .eq('symbol', r.symbol).order('date', { ascending: false }).limit(1).single()
-    if (data?.close_price) setPrice(String(data.close_price))
+    if (data?.close) setPrice(String(data.close))
     setPriceLoading(false)
   }
 
@@ -99,17 +99,44 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-      const { data: portfolios } = await supabase.from('portfolios').select('id').eq('asset_class', 'EQUITY').limit(1)
-      const { data: accounts }   = await supabase.from('accounts').select('id').limit(1)
-      if (!portfolios?.length || !accounts?.length) throw new Error('No default portfolio found')
-      const { data: sec, error: secErr } = await supabase
+
+      // Get the Stocks portfolio and default account
+      const { data: portfolios } = await supabase
+        .from('portfolios').select('id').eq('user_id', user.id)
+        .in('name', ['Stocks', 'Equity']).limit(1)
+      const { data: portfoliosByClass } = portfolios?.length
+        ? { data: portfolios }
+        : await supabase.from('portfolios').select('id').eq('user_id', user.id)
+            .eq('asset_class', 'EQUITY').limit(1)
+      const { data: accounts } = await supabase
+        .from('accounts').select('id').eq('user_id', user.id).limit(1)
+      if (!portfoliosByClass?.length || !accounts?.length)
+        throw new Error('No default portfolio found. Please complete account setup.')
+
+      // Look up existing security first — no UNIQUE constraint so we can't upsert
+      let secId: string
+      const { data: existing } = await supabase
         .from('securities')
-        .upsert({ user_id: user.id, name: picked.name, ticker_symbol: picked.symbol, currency_code: 'INR' } as never, { onConflict: 'ticker_symbol,user_id' })
-        .select('id').single()
-      if (secErr) throw secErr
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('ticker_symbol', picked.symbol)
+        .limit(1)
+        .maybeSingle()
+
+      if (existing?.id) {
+        secId = existing.id
+      } else {
+        const { data: inserted, error: insErr } = await supabase
+          .from('securities')
+          .insert({ user_id: user.id, name: picked.name, ticker_symbol: picked.symbol, currency_code: 'INR' } as never)
+          .select('id').single()
+        if (insErr) throw insErr
+        secId = inserted.id
+      }
+
       const { error: txErr } = await supabase.from('portfolio_transactions').insert({
-        portfolio_id: portfolios[0].id, account_id: accounts[0].id,
-        security_id: sec.id, type: 'BUY', currency_code: 'INR',
+        portfolio_id: portfoliosByClass[0].id, account_id: accounts[0].id,
+        security_id: secId, type: 'BUY', currency_code: 'INR',
         shares: Math.round(parseFloat(units) * 100_000_000),
         amount: Math.round(parseFloat(price) * parseFloat(units) * 100), date,
       } as never)
