@@ -2,7 +2,17 @@
 
 /* Ensure form elements inherit the app font (they default to browser serif/sans) */
 input, button, select, textarea {
-  font-family: inherit;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Override browser autofill styling — Chrome/Edge force their own font + bg */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  font-family: 'Montserrat', sans-serif !important;
+  -webkit-text-fill-color: inherit !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255,255,255,0.1) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* ============================================================
