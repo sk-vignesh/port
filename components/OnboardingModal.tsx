@@ -160,11 +160,10 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     for (let i = 1; i <= 5; i++) { const img = new Image(); img.src = `/onboarding/step${i}.jpg` }
   }, [])
 
-  // ── Panel layout helper — content grows, buttons always at bottom ────────────
   const Panel = ({ children, buttons }: { children: React.ReactNode; buttons: React.ReactNode }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ paddingTop: 16 }}>{buttons}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>{children}</div>
+      <div style={{ paddingTop: 14, flexShrink: 0 }}>{buttons}</div>
     </div>
   )
 
@@ -258,20 +257,21 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
       <Speech>
         Alright! Let&apos;s get your investments in. How would you like to start?
       </Speech>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {paths.map(opt => (
           <button key={opt.id} onClick={() => { setPath(opt.id); setSlide(3) }} style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px',
             borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
             background: 'rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', color: '#ffffff',
+            width: '100%',
           }}>
-            <IconBox icon={opt.icon} color={opt.color} size={44} />
-            <div style={{ paddingTop: 2 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{opt.title}</span>
-                <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#c7d2fe', background: 'rgba(99,102,241,0.25)', borderRadius: 6, padding: '2px 7px' }}>{opt.subtitle}</span>
+            <IconBox icon={opt.icon} color={opt.color} size={36} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, fontSize: '0.90rem' }}>{opt.title}</span>
+                <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#c7d2fe', background: 'rgba(99,102,241,0.25)', borderRadius: 6, padding: '1px 6px', flexShrink: 0 }}>{opt.subtitle}</span>
+                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>— {opt.desc}</span>
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{opt.desc}</div>
             </div>
           </button>
         ))}
