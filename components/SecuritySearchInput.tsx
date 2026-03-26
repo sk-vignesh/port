@@ -11,10 +11,17 @@ export interface SearchResult {
   type?:     string   // e.g. "EQUITY", "ETF", "MUTUALFUND"
 }
 
+export interface SecurityItem {
+  symbol: string
+  name:   string
+}
+
 interface Props {
   onSelect: (result: SearchResult) => void
   placeholder?: string
   lightTheme?: boolean
+  /** Pre-loaded list for instant client-side search (from /api/securities-list) */
+  prefetchedList?: SecurityItem[]
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -57,6 +64,7 @@ export default function SecuritySearchInput({
   onSelect,
   placeholder = 'Search: Reliance, TCS, HDFC Bank, Nifty BeES…',
   lightTheme = false,
+  prefetchedList,
 }: Props) {
   const inputStyles: React.CSSProperties = lightTheme ? {
     width: '100%', padding: '10px 14px', paddingLeft: 36,
@@ -95,11 +103,33 @@ export default function SecuritySearchInput({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  // Debounced live search
+  // Debounced search — instant if prefetchedList is available, edge fn fallback otherwise
   useEffect(() => {
-    const q = query.trim()
+    const q = query.trim().toLowerCase()
     if (q.length < 2) { setResults([]); setOpen(false); setError(false); return }
 
+    // Instant client-side filtering from prefetched list
+    if (prefetchedList && prefetchedList.length > 0) {
+      const matches = prefetchedList
+        .filter(item =>
+          item.symbol.toLowerCase().includes(q) ||
+          item.name.toLowerCase().includes(q)
+        )
+        .slice(0, 10)
+        .map(item => ({
+          symbol:   item.symbol,
+          name:     item.name,
+          exchange: 'NSE',
+          currency: 'INR',
+          type:     'EQUITY' as const,
+        }))
+      setResults(matches)
+      setOpen(matches.length > 0)
+      setActiveIdx(0)
+      return
+    }
+
+    // Fallback: edge function (slower)
     const timer = setTimeout(async () => {
       setLoading(true)
       setError(false)
@@ -139,7 +169,7 @@ export default function SecuritySearchInput({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, prefetchedList])
 
   // Scroll active item into view
   useEffect(() => {

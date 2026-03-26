@@ -9,10 +9,13 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 import { createClient } from '@/lib/supabase/client'
-import SecuritySearchInput, { SearchResult } from '@/components/SecuritySearchInput'
+import SecuritySearchInput, { SearchResult, SecurityItem } from '@/components/SecuritySearchInput'
 
 type Path   = 'cas' | 'csv' | 'manual' | null
 type Status = 'idle' | 'loading' | 'done' | 'error'
+
+// Prefetched securities list — loaded once, shared across remounts
+let cachedSecurities: SecurityItem[] | null = null
 
 const Dot = ({ active, done }: { active: boolean; done: boolean }) => (
   <div style={{
@@ -64,8 +67,17 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   const [casFile, setCasFile]           = useState<File | null>(null)
   const [casPassword, setCasPassword]   = useState('')
   const [casResult, setCasResult]       = useState<{ funds: number; transactions: number } | null>(null)
+  const [secList, setSecList]           = useState<SecurityItem[]>(cachedSecurities ?? [])
 
   const supabase = createClient()
+
+  // Prefetch all securities on mount (instant search afterwards)
+  useEffect(() => {
+    if (cachedSecurities) { setSecList(cachedSecurities); return }
+    fetch('/api/securities-list').then(r => r.json()).then((list: SecurityItem[]) => {
+      if (Array.isArray(list)) { cachedSecurities = list; setSecList(list) }
+    }).catch(() => {})
+  }, [])
 
   const markComplete = useCallback(async () => {
     await fetch('/api/onboarding-complete', { method: 'POST' })
@@ -325,7 +337,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
                 <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
               </div>
             ) : (
-              <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" lightTheme />
+              <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" lightTheme prefetchedList={secList} />
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
