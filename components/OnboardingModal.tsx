@@ -5,7 +5,7 @@
  * Buttons are consistently pinned to the bottom of the card on every slide.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ASSET_CLASS_LIST } from '@/lib/assetClasses'
 import { createClient } from '@/lib/supabase/client'
@@ -125,6 +125,28 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
   }
 
   const bgImage = `/onboarding/step${slide + 1}.jpg`
+
+  // ── Crossfade between background images ─────────────────────────────────
+  const [bottomBg, setBottomBg]     = useState(bgImage)
+  const [topBg, setTopBg]           = useState<string | null>(null)
+  const [topVisible, setTopVisible] = useState(false)
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (bgImage === bottomBg) return
+    if (fadeTimer.current) clearTimeout(fadeTimer.current)
+    setTopBg(bgImage)
+    setTopVisible(false)
+    requestAnimationFrame(() => requestAnimationFrame(() => setTopVisible(true)))
+    fadeTimer.current = setTimeout(() => {
+      setBottomBg(bgImage); setTopBg(null); setTopVisible(false)
+    }, 650)
+    return () => { if (fadeTimer.current) clearTimeout(fadeTimer.current) }
+  }, [bgImage]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    for (let i = 1; i <= 5; i++) { const img = new Image(); img.src = `/onboarding/step${i}.jpg` }
+  }, [])
 
   // ── Panel layout helper — content grows, buttons always at bottom ────────────
   const Panel = ({ children, buttons }: { children: React.ReactNode; buttons: React.ReactNode }) => (
@@ -396,10 +418,15 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
       `}</style>
 
       <div style={{ position: 'fixed', inset: 0, zIndex: 9999, animation: 'fadeIn 0.5s ease-out' }}>
-        {/* Full-bleed background photo */}
-        <img key={bgImage} src={bgImage} alt=""
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', animation: 'fadeIn 0.6s ease-out' }}
+        {/* Background crossfade — bottom layer stays visible while top fades in */}
+        <img src={bottomBg} alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
         />
+        {topBg && (
+          <img src={topBg} alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: topVisible ? 1 : 0, transition: 'opacity 0.6s ease-in-out' }}
+          />
+        )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.28) 100%)' }} />
 
         {/* ── Glass card — bottom right ─────────────────────────────── */}
