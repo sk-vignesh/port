@@ -7,15 +7,15 @@ type Theme = 'light' | 'dark' | 'system'
 const ThemeContext = createContext<{
   theme: Theme
   setTheme: (t: Theme) => void
-}>({ theme: 'dark', setTheme: () => {} })
+}>({ theme: 'system', setTheme: () => {} })
 
 export function useTheme() { return useContext(ThemeContext) }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
+  const [theme, setThemeState] = useState<Theme>('system')
 
   useEffect(() => {
-    const stored = (localStorage.getItem('pp-theme') as Theme) || 'dark'
+    const stored = (localStorage.getItem('pp-theme') as Theme) || 'system'
     setThemeState(stored)
     applyTheme(stored)
   }, [])
