@@ -17,9 +17,12 @@ export default function LoginPage() {
 
   // Wait for Montserrat to load before revealing the form
   useEffect(() => {
-    document.fonts.ready.then(() => {
-      // Small extra delay so browser paints autofill with correct font
-      setTimeout(() => setFontReady(true), 100)
+    // Explicitly load Montserrat and wait for it — document.fonts.ready
+    // resolves immediately with display:swap (it considers fallback as "ready")
+    document.fonts.load('600 16px Montserrat').then(() => {
+      setFontReady(true)
+    }).catch(() => {
+      setFontReady(true) // show form anyway on error
     })
     // Safety fallback — show after 3s regardless
     const fallback = setTimeout(() => setFontReady(true), 3000)
