@@ -27,7 +27,7 @@ const Dot = ({ active, done }: { active: boolean; done: boolean }) => (
 
 // Speech bubble — primary conversational text
 const Speech = ({ children }: { children: React.ReactNode }) => (
-  <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: '#1f2937', margin: '0 0 22px', fontWeight: 500 }}>
+  <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: '#ffffff', margin: '0 0 22px', fontWeight: 500, textShadow: '0 1px 3px rgba(0,0,0,0.25)' }}>
     {children}
   </p>
 )
@@ -207,12 +207,12 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           <div key={ac.id} style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 14,
-            background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)',
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
           }}>
             <IconBox icon={ac.icon} color={assetColors[ac.id] ?? 'linear-gradient(135deg,#e5e7eb,#d1d5db)'} size={40} />
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#111827' }}>{ac.label}</div>
-              <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 2 }}>Track &amp; analyse</div>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#ffffff' }}>{ac.label}</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>Track &amp; analyse</div>
             </div>
           </div>
         ))}
@@ -237,12 +237,12 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
           <div key={f.title} style={{
             display: 'flex', alignItems: 'flex-start', gap: 14,
             padding: '14px 16px', borderRadius: 14,
-            background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.07)',
+            background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
           }}>
             <IconBox icon={f.icon} color={f.color} size={44} />
             <div style={{ paddingTop: 2 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827', marginBottom: 4 }}>{f.title}</div>
-              <div style={{ fontSize: '0.78rem', color: '#4b5563', lineHeight: 1.55 }}>{f.body}</div>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#ffffff', marginBottom: 4 }}>{f.title}</div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.55 }}>{f.body}</div>
             </div>
           </div>
         ))}
@@ -262,8 +262,8 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
         {paths.map(opt => (
           <button key={opt.id} onClick={() => { setPath(opt.id); setSlide(3) }} style={{
             display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px',
-            borderRadius: 14, border: '1px solid rgba(0,0,0,0.10)',
-            background: 'rgba(0,0,0,0.03)', cursor: 'pointer', textAlign: 'left', color: '#111827',
+            borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)',
+            background: 'rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', color: '#ffffff',
           }}>
             <IconBox icon={opt.icon} color={opt.color} size={44} />
             <div style={{ paddingTop: 2 }}>
@@ -331,10 +331,10 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             {picked ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 12, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.07)' }}>
                 <div>
-                  <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#111827' }}>{picked.symbol}</span>
-                  {' '}<span style={{ color: '#6b7280', fontSize: '0.82rem' }}>{picked.name}</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#ffffff' }}>{picked.symbol}</span>
+                  {' '}<span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem' }}>{picked.name}</span>
                 </div>
-                <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+                <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
               </div>
             ) : (
               <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" lightTheme prefetchedList={secList} />
@@ -348,7 +348,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             <div>
               <label style={labelStyle}>
                 Price ₹
-                {priceLoading && <span style={{ marginLeft: 4, fontSize: '0.62rem', color: '#9ca3af' }}>fetching…</span>}
+                {priceLoading && <span style={{ marginLeft: 4, fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)' }}>fetching…</span>}
                 {!priceLoading && price && <span style={{ marginLeft: 4, fontSize: '0.62rem', color: '#6366f1' }}>auto-filled</span>}
               </label>
               <input type="number" placeholder="2350" value={price} onChange={e => setPrice(e.target.value)}
@@ -370,10 +370,10 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             {' '}or check your CAMS / KFintech email.
             The PDF password is usually your PAN followed by your date of birth.
           </Speech>
-          <label style={{ display: 'block', border: '2px dashed rgba(0,0,0,0.15)', borderRadius: 14, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 12, background: 'rgba(0,0,0,0.02)' }}>
+          <label style={{ display: 'block', border: '2px dashed rgba(255,255,255,0.25)', borderRadius: 14, padding: '20px', textAlign: 'center', cursor: 'pointer', marginBottom: 12, background: 'rgba(255,255,255,0.05)' }}>
             <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => setCasFile(e.target.files?.[0] ?? null)} />
             <div style={{ fontSize: '2.2rem', marginBottom: 6 }}>📄</div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: casFile ? '#16a34a' : '#6b7280' }}>{casFile ? `✓ ${casFile.name}` : 'Click to browse or drop your PDF here'}</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 600, color: casFile ? '#4ade80' : 'rgba(255,255,255,0.6)' }}>{casFile ? `✓ ${casFile.name}` : 'Click to browse or drop your PDF here'}</div>
           </label>
           <div>
             <label style={labelStyle}>PDF Password (if protected)</label>
@@ -401,7 +401,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
     >
       <div style={{ textAlign: 'center', paddingTop: 20 }}>
         <div style={{ fontSize: '3.5rem', marginBottom: 20 }}>🎉</div>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', marginBottom: 12, letterSpacing: '-0.02em' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginBottom: 12, letterSpacing: '-0.02em', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
           You&apos;re all set!
         </h2>
         {casResult && (
@@ -439,31 +439,31 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: topVisible ? 1 : 0, transition: 'opacity 0.6s ease-in-out' }}
           />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.28) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.45) 100%)' }} />
 
         {/* ── Glass card — bottom right ─────────────────────────────── */}
         <div style={{
           position: 'absolute', bottom: 40, right: 40,
           width: 580,
           height: 560,
-          background: 'rgba(255,255,255,0.2)',
-          backdropFilter: 'blur(5px)',
-          WebkitBackdropFilter: 'blur(5px)',
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           borderRadius: 24,
-          border: '1px solid rgba(255,255,255,0.3)',
-          boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           padding: '24px 28px 24px',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
           animation: 'slideUp 0.5s ease-out',
-          color: '#111827',
+          color: '#ffffff',
         }}>
           {/* Branding row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexShrink: 0 }}>
             <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem', flexShrink: 0 }}>📊</div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#111827', letterSpacing: '-0.02em' }}>Apna Stocks</div>
-              <div style={{ fontSize: '0.70rem', color: '#6b7280' }}>Your complete investment picture</div>
+              <div style={{ fontWeight: 800, fontSize: '1.05rem', color: '#ffffff', letterSpacing: '-0.02em', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>Apna Stocks</div>
+              <div style={{ fontSize: '0.70rem', color: 'rgba(255,255,255,0.7)' }}>Your complete investment picture</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 5 }}>
               {Array.from({ length: 5 }).map((_, i) => <Dot key={i} active={i === slide} done={i < slide} />)}
@@ -490,14 +490,14 @@ const btnPrimary: React.CSSProperties = {
 }
 const btnSecondary: React.CSSProperties = {
   padding: '13px 18px', borderRadius: 12, fontWeight: 600, fontSize: '0.90rem',
-  border: '1px solid rgba(0,0,0,0.15)', background: 'rgba(0,0,0,0.04)',
-  color: '#374151', cursor: 'pointer',
+  border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
+  color: '#ffffff', cursor: 'pointer',
 }
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10,
-  border: '1px solid rgba(0,0,0,0.15)', background: 'rgba(0,0,0,0.03)',
-  color: '#111827', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
+  border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
+  color: '#ffffff', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#6b7280', marginBottom: 5,
+  display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 5, textShadow: '0 1px 2px rgba(0,0,0,0.2)',
 }

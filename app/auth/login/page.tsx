@@ -21,11 +21,12 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(error.message)
+      setLoading(false)
     } else {
+      // Keep loading=true so the card stays in "Signing in…" state during navigation
       router.push('/')
       router.refresh()
     }
-    setLoading(false)
   }
 
   return (
@@ -35,28 +36,28 @@ export default function LoginPage() {
         @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      <div style={{ position: 'fixed', inset: 0, animation: 'fadeIn 0.5s ease-out' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9998, animation: 'fadeIn 0.5s ease-out' }}>
         {/* Full-bleed background */}
         <img
           src="/onboarding/welcome.jpg"
           alt=""
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(0,0,0,0.04) 0%,rgba(0,0,0,0.28) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(0,0,0,0.10) 0%,rgba(0,0,0,0.45) 100%)' }} />
 
-        {/* Glass card — bottom right, same style as onboarding */}
+        {/* Glass card — bottom right */}
         <div style={{
           position: 'absolute', bottom: 40, right: 40,
           width: 420,
-          background: 'rgba(255,255,255,0.2)',
-          backdropFilter: 'blur(5px)',
-          WebkitBackdropFilter: 'blur(5px)',
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           borderRadius: 24,
-          border: '1px solid rgba(255,255,255,0.3)',
-          boxShadow: '0 4px 30px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
           padding: '32px 32px 28px',
           animation: 'slideUp 0.5s ease-out',
-          color: '#111827',
+          color: '#ffffff',
         }}>
           {/* Branding */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
@@ -69,13 +70,13 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#111827', letterSpacing: '-0.02em' }}>Apna Stocks</div>
-              <div style={{ fontSize: '0.70rem', color: '#6b7280' }}>Your complete investment picture</div>
+              <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#ffffff', letterSpacing: '-0.02em', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>Apna Stocks</div>
+              <div style={{ fontSize: '0.70rem', color: 'rgba(255,255,255,0.7)' }}>Your complete investment picture</div>
             </div>
           </div>
 
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#111827', marginBottom: 6, letterSpacing: '-0.02em' }}>Welcome back</h1>
-          <p style={{ fontSize: '0.90rem', color: '#6b7280', marginBottom: 24 }}>Sign in to your portfolio dashboard</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginBottom: 6, letterSpacing: '-0.02em', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>Welcome back</h1>
+          <p style={{ fontSize: '0.90rem', color: 'rgba(255,255,255,0.75)', marginBottom: 24 }}>Sign in to your portfolio dashboard</p>
 
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: 16 }}>
@@ -96,7 +97,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, color: '#dc2626', fontSize: '0.875rem', marginBottom: 16 }}>
+              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, color: '#fca5a5', fontSize: '0.875rem', marginBottom: 16 }}>
                 {error}
               </div>
             )}
@@ -116,9 +117,9 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', fontSize: '0.85rem', color: '#6b7280', marginTop: 20 }}>
+          <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginTop: 20 }}>
             Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" style={{ color: '#6366f1', fontWeight: 600, textDecoration: 'none' }}>Create one free</Link>
+            <Link href="/auth/signup" style={{ color: '#a5b4fc', fontWeight: 600, textDecoration: 'none' }}>Create one free</Link>
           </p>
         </div>
       </div>
@@ -127,10 +128,10 @@ export default function LoginPage() {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: 6,
+  display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: 6, textShadow: '0 1px 2px rgba(0,0,0,0.2)',
 }
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 12,
-  border: '1px solid rgba(0,0,0,0.15)', background: 'rgba(0,0,0,0.03)',
-  color: '#111827', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box',
+  border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
+  color: '#ffffff', fontSize: '0.92rem', outline: 'none', boxSizing: 'border-box',
 }
