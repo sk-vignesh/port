@@ -149,17 +149,17 @@ export default function LoginPage() {
               <div style={{ marginBottom: 16 }}>
                 <label style={labelStyle}>Email address</label>
                 <input
-                  id="email" type="email" placeholder="you@example.com"
-                  value={email} onChange={e => setEmail(e.target.value)}
-                  required autoComplete="email" style={inputStyle}
-                />
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>Password</label>
-                <input
-                  id="password" type="password" placeholder="••••••••"
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  required autoComplete="current-password" style={inputStyle}
+                id="email" type="email" placeholder="you@example.com"
+                value={email} onChange={e => setEmail(e.target.value)}
+                required autoComplete="off" style={inputStyle}
+              />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Password</label>
+              <input
+                id="password" type="password" placeholder="••••••••"
+                value={password} onChange={e => setPassword(e.target.value)}
+                required autoComplete="new-password" style={inputStyle}
                 />
               </div>
 
