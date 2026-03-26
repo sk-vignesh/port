@@ -14,6 +14,7 @@ export interface SearchResult {
 interface Props {
   onSelect: (result: SearchResult) => void
   placeholder?: string
+  lightTheme?: boolean   // use light-mode inline styles (for use on light backgrounds)
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -54,7 +55,25 @@ function sectorDot(sector?: string) {
 export default function SecuritySearchInput({
   onSelect,
   placeholder = 'Search: Reliance, TCS, HDFC Bank, Nifty BeES…',
+  lightTheme = false,
 }: Props) {
+  const inputStyles: React.CSSProperties = lightTheme ? {
+    width: '100%', padding: '10px 14px', paddingLeft: 36,
+    background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.15)',
+    borderRadius: 12, color: '#111827', fontSize: '0.9rem',
+    outline: 'none', boxSizing: 'border-box' as const,
+  } : { paddingLeft: 36 }
+  const dropdownStyles: React.CSSProperties = lightTheme ? {
+    position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 10000,
+    background: '#ffffff', border: '1px solid rgba(0,0,0,0.12)',
+    borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+    overflow: 'hidden', maxHeight: 320, overflowY: 'auto' as const,
+  } : {
+    position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 10000,
+    background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
+    overflow: 'hidden', maxHeight: 360, overflowY: 'auto' as const,
+  }
   const [query,     setQuery]     = useState('')
   const [results,   setResults]   = useState<SearchResult[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -153,8 +172,8 @@ export default function SecuritySearchInput({
         <input
           ref={inputRef}
           type="text"
-          className="form-input"
-          style={{ paddingLeft: 36 }}
+          className={lightTheme ? undefined : 'form-input'}
+          style={inputStyles}
           value={query}
           onChange={e => { setQuery(e.target.value); if (e.target.value.trim().length >= 2) setOpen(true) }}
           onKeyDown={handleKeyDown}
@@ -179,22 +198,14 @@ export default function SecuritySearchInput({
       {showDropdown && (
         <div
           ref={listRef}
-          style={{
-            position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 400,
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.4)',
-            overflow: 'hidden',
-            maxHeight: 360,
-            overflowY: 'auto',
-          }}
+          style={dropdownStyles}
         >
           {/* Header */}
           <div style={{
             padding: '6px 12px 4px', fontSize: '0.68rem', fontWeight: 600,
             textTransform: 'uppercase', letterSpacing: '0.08em',
-            color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border)',
+            color: lightTheme ? '#6b7280' : 'var(--color-text-muted)',
+            borderBottom: lightTheme ? '1px solid rgba(0,0,0,0.08)' : '1px solid var(--color-border)',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {loading ? (
@@ -219,9 +230,13 @@ export default function SecuritySearchInput({
               style={{
                 width: '100%', textAlign: 'left',
                 padding: '10px 14px',
-                background: i === activeIdx ? 'var(--color-bg-card-hover)' : 'transparent',
+                background: i === activeIdx
+                  ? (lightTheme ? 'rgba(99,102,241,0.07)' : 'var(--color-bg-card-hover)')
+                  : 'transparent',
                 border: 'none',
-                borderBottom: i < results.length - 1 ? '1px solid var(--color-border)' : 'none',
+                borderBottom: i < results.length - 1
+                  ? (lightTheme ? '1px solid rgba(0,0,0,0.06)' : '1px solid var(--color-border)')
+                  : 'none',
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 10,
                 transition: 'background 0.1s',
@@ -230,13 +245,13 @@ export default function SecuritySearchInput({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
                   fontWeight: 600, fontSize: '0.875rem',
-                  color: 'var(--color-text-primary)',
+                  color: lightTheme ? '#111827' : 'var(--color-text-primary)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {result.name}
                 </div>
                 <div style={{
-                  fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2,
+                  fontSize: '0.72rem', color: lightTheme ? '#6b7280' : 'var(--color-text-muted)', marginTop: 2,
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}>
                   <code style={{ fontSize: '0.7rem', color: 'var(--color-accent-light)' }}>{result.symbol}</code>

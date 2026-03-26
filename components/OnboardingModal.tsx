@@ -293,14 +293,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             Search for the stock you own — I&apos;ll fetch today&apos;s price automatically.
             Just fill in how many units you hold and when you bought them.
           </Speech>
-          <style>{`
-            .onb-s input{background:rgba(0,0,0,0.04)!important;border:1px solid rgba(0,0,0,0.15)!important;color:#111827!important;border-radius:10px!important;font-size:0.9rem!important}
-            .onb-s input::placeholder{color:#9ca3af!important}
-            .onb-s [role="listbox"],.onb-s ul{background:#fff!important;border:1px solid rgba(0,0,0,0.1)!important;box-shadow:0 4px 20px rgba(0,0,0,0.12)!important}
-            .onb-s [role="option"],.onb-s li{color:#111827!important;font-size:0.88rem!important}
-            .onb-s [role="option"]:hover,.onb-s li:hover{background:rgba(99,102,241,0.07)!important}
-          `}</style>
-          <div className="onb-s" style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 12 }}>
             {picked ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 12, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.07)' }}>
                 <div>
@@ -310,7 +303,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
                 <button onClick={() => setPicked(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
               </div>
             ) : (
-              <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" />
+              <SecuritySearchInput onSelect={handleStockSelect} placeholder="Search: Reliance, TCS, HDFC Bank…" lightTheme />
             )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
