@@ -145,3 +145,18 @@ Phase 6 (Analytics) → makes the data meaningful / actionable
 Phase 7 (Alerts + Polish) → web app ready for real users
 Phase 8 + 9 (Mobile) → web is validated first, mobile follows same patterns
 ```
+
+---
+
+## Backlog
+
+### Phase 999.1: Fix Onboarding Security Search Box (BACKLOG)
+
+**Goal:** [Captured for future planning]
+- `SecuritySearchInput` in onboarding manual-add flow shows "Search unavailable"
+- Root causes: edge function auth (missing `Authorization: Bearer` header), dark-theme CSS variables invisible on light glassmorphic card
+- Partial fix applied (lightTheme prop + Authorization header) — needs end-to-end verification
+**Requirements:** TBD
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
