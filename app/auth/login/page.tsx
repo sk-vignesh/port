@@ -15,17 +15,13 @@ export default function LoginPage() {
   const router   = useRouter()
   const supabase = createClient()
 
-  // Wait for Montserrat to load before revealing the form
+  // Show splash for minimum 1.5s AND wait for Montserrat to truly load
   useEffect(() => {
-    // Explicitly load Montserrat and wait for it — document.fonts.ready
-    // resolves immediately with display:swap (it considers fallback as "ready")
-    document.fonts.load('600 16px Montserrat').then(() => {
-      setFontReady(true)
-    }).catch(() => {
-      setFontReady(true) // show form anyway on error
-    })
-    // Safety fallback — show after 3s regardless
-    const fallback = setTimeout(() => setFontReady(true), 3000)
+    const minDelay = new Promise(r => setTimeout(r, 1500))
+    const fontLoad = document.fonts.load('600 16px Montserrat').catch(() => {})
+    Promise.all([minDelay, fontLoad]).then(() => setFontReady(true))
+    // Safety fallback
+    const fallback = setTimeout(() => setFontReady(true), 4000)
     return () => clearTimeout(fallback)
   }, [])
 
