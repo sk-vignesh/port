@@ -105,7 +105,7 @@ export default function SecuritySearchInput({
       try {
         const res = await fetch(
           `${SUPABASE_URL}/functions/v1/price-search?q=${encodeURIComponent(q)}`,
-          { headers: { apikey: ANON_KEY } }
+          { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } }
         )
         if (res.ok) {
           const raw: Array<{
