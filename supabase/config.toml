@@ -31,8 +31,8 @@ additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = true
 
-[functions]
-verify_jwt = true
+[functions.price-search]
+verify_jwt = false
 
 [analytics]
 enabled = false

@@ -14,8 +14,11 @@ export interface SearchResult {
 interface Props {
   onSelect: (result: SearchResult) => void
   placeholder?: string
-  lightTheme?: boolean   // use light-mode inline styles (for use on light backgrounds)
+  lightTheme?: boolean
 }
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const ANON_KEY    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 
 const SECTOR_COLORS: Record<string, string> = {
@@ -102,7 +105,8 @@ export default function SecuritySearchInput({
       setError(false)
       try {
         const res = await fetch(
-          `/api/price-search?q=${encodeURIComponent(q)}`
+          `${SUPABASE_URL}/functions/v1/price-search?q=${encodeURIComponent(q)}`,
+          { headers: { apikey: ANON_KEY } }
         )
         if (res.ok) {
           const raw: Array<{
