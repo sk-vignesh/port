@@ -497,6 +497,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10,
   border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.1)',
   color: '#ffffff', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
+  fontFamily: 'inherit',
 }
 const labelStyle: React.CSSProperties = {
   display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginBottom: 5, textShadow: '0 1px 2px rgba(0,0,0,0.2)',
