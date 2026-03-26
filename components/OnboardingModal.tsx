@@ -20,7 +20,7 @@ let cachedSecurities: SecurityItem[] | null = null
 const Dot = ({ active, done }: { active: boolean; done: boolean }) => (
   <div style={{
     width: active ? 24 : 8, height: 8, borderRadius: 4,
-    background: done ? '#16a34a' : active ? '#6366f1' : 'rgba(0,0,0,0.15)',
+    background: done ? '#4ade80' : active ? '#a5b4fc' : 'rgba(255,255,255,0.3)',
     transition: 'all 0.3s',
   }} />
 )
@@ -269,7 +269,7 @@ export default function OnboardingModal({ onComplete }: { onComplete: () => void
             <div style={{ paddingTop: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{opt.title}</span>
-                <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#6366f1', background: 'rgba(99,102,241,0.10)', borderRadius: 6, padding: '2px 7px' }}>{opt.subtitle}</span>
+                <span style={{ fontSize: '0.70rem', fontWeight: 600, color: '#c7d2fe', background: 'rgba(99,102,241,0.25)', borderRadius: 6, padding: '2px 7px' }}>{opt.subtitle}</span>
               </div>
               <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{opt.desc}</div>
             </div>
