@@ -160,3 +160,16 @@ Phase 8 + 9 (Mobile) → web is validated first, mobile follows same patterns
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.2: Zero-Knowledge Encryption (Premium Tier) (BACKLOG)
+
+**Goal:** Offer actual zero-knowledge encryption as a premium feature using split-trust architecture.
+- Key storage in user's own Google Drive (via OAuth `drive.file` scope)
+- Database stores only ciphertext
+- Decryption & XIRR analytics run locally on the client
+- Full cross-device sync works automatically
+
+**Requirements:** TBD
+
+Plans:
+- [ ] Implement split-trust architecture on Web and Mobile (promote with /gsd-review-backlog when ready)
